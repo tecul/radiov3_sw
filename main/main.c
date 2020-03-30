@@ -1,40 +1,73 @@
-/* Hello World Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_freertos_hooks.h"
 #include "esp_system.h"
-#include "esp_spi_flash.h"
+#include "nvs_flash.h"
+#include "esp_log.h"
 
+#include "driver/gpio.h"
+
+#include "lvgl/lvgl.h"
+#include "disp_spi.h"
+#include "ili9341.h"
+#include "tp_spi.h"
+#include "xpt2046.h"
+
+static const char* TAG = "Radiov3";
+
+static lv_color_t buf1[DISP_BUF_SIZE];
+static lv_color_t buf2[DISP_BUF_SIZE];
+static lv_disp_buf_t disp_buf;
+
+static void IRAM_ATTR lv_tick_task(void)
+{
+	lv_tick_inc(portTICK_RATE_MS);
+}
 
 void app_main()
 {
-    printf("Hello world!\n");
+	lv_disp_drv_t disp_drv;
+	int ret;
 
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    esp_chip_info(&chip_info);
-    printf("This is ESP32 chip with %d CPU cores, WiFi%s%s, ",
-            chip_info.cores,
-            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
-            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
+	ESP_LOGI(TAG, "Starting");
+	/* select gpio instead of jtag default config */
+	PIN_FUNC_SELECT(IO_MUX_GPIO12_REG, PIN_FUNC_GPIO);
+	PIN_FUNC_SELECT(IO_MUX_GPIO13_REG, PIN_FUNC_GPIO);
 
-    printf("silicon revision %d, ", chip_info.revision);
+	ESP_LOGI(TAG, "nvs init");
+	/* init nvs */
+	ret = nvs_flash_init();
+	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		ret = nvs_flash_init();
+	}
+	ESP_ERROR_CHECK(ret);
 
-    printf("%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
-            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+	ESP_LOGI(TAG, "display init");
+	/* display stack init */
+	lv_init();
+	disp_spi_init();
+	ili9341_init();
 
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
+	lv_disp_buf_init(&disp_buf, buf1, buf2, DISP_BUF_SIZE);
+	lv_disp_drv_init(&disp_drv);
+	disp_drv.flush_cb = ili9341_flush;
+	disp_drv.buffer = &disp_buf;
+	lv_disp_drv_register(&disp_drv);
+
+	tp_spi_init();
+	xpt2046_init();
+
+	esp_register_freertos_tick_hook(lv_tick_task);
+
+	ESP_LOGI(TAG, "screen init");
+	/* setup init screen */
+
+	ESP_LOGI(TAG, "main loop");
+	/* main loop */
+	while(1) {
+		vTaskDelay(1);
+		lv_task_handler();
+	}
 }
