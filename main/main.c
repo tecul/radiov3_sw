@@ -14,6 +14,8 @@
 #include "tp_spi.h"
 #include "xpt2046.h"
 
+#include "main_menu.h"
+
 static const char* TAG = "Radiov3";
 
 static lv_color_t buf1[DISP_BUF_SIZE];
@@ -28,6 +30,7 @@ static void IRAM_ATTR lv_tick_task(void)
 void app_main()
 {
 	lv_disp_drv_t disp_drv;
+	void *main_menu_handle;
 	int ret;
 
 	ESP_LOGI(TAG, "Starting");
@@ -63,6 +66,8 @@ void app_main()
 
 	ESP_LOGI(TAG, "screen init");
 	/* setup init screen */
+	main_menu_handle = main_menu_create();
+	assert(main_menu_handle);
 
 	ESP_LOGI(TAG, "main loop");
 	/* main loop */
