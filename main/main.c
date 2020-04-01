@@ -14,9 +14,10 @@
 #include "tp_spi.h"
 #include "xpt2046.h"
 
+#include "calibration.h"
 #include "main_menu.h"
 
-static const char* TAG = "Radiov3";
+static const char* TAG = "rv3";
 
 static lv_color_t buf1[DISP_BUF_SIZE];
 static lv_color_t buf2[DISP_BUF_SIZE];
@@ -30,6 +31,7 @@ static void IRAM_ATTR lv_tick_task(void)
 void app_main()
 {
 	lv_disp_drv_t disp_drv;
+	lv_indev_drv_t indev_drv;
 	void *main_menu_handle;
 	int ret;
 
@@ -59,8 +61,13 @@ void app_main()
 	disp_drv.buffer = &disp_buf;
 	lv_disp_drv_register(&disp_drv);
 
+	ESP_LOGI(TAG, "ts init");
 	tp_spi_init();
 	xpt2046_init();
+	lv_indev_drv_init(&indev_drv);
+	indev_drv.read_cb = xpt2046_read;
+	indev_drv.type = LV_INDEV_TYPE_POINTER;
+	lv_indev_drv_register(&indev_drv);
 
 	esp_register_freertos_tick_hook(lv_tick_task);
 
@@ -68,6 +75,10 @@ void app_main()
 	/* setup init screen */
 	main_menu_handle = main_menu_create();
 	assert(main_menu_handle);
+
+	/* calibrate ts if needed */
+	ESP_LOGI(TAG, "ts calibration setup");
+	calibration_setup(&indev_drv);
 
 	ESP_LOGI(TAG, "main loop");
 	/* main loop */
