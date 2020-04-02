@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include "lvgl/lvgl.h"
+#include "settings.h"
 
 typedef void (*cb)(lv_obj_t *scr, lv_event_t event);
 
@@ -41,7 +42,7 @@ static void settings_event_cb(lv_obj_t *scr, lv_event_t event)
 	if( event != LV_EVENT_CLICKED)
 		return;
 
-	printf("You click on settings button\n");
+	settings_create();
 }
 
 void *main_menu_create()

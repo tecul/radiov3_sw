@@ -214,11 +214,11 @@ static void handle_state_wait_leave(struct calib *calib)
 	compute_calib(CIRCLE_OFFSET + CIRCLE_SIZE / 2 ,calib->point[0].x,
 		      calib->hres - CIRCLE_OFFSET - CIRCLE_SIZE / 2, calib->point[1].x,
 		      &ax, &bx);
-	ESP_LOGD(TAG, "a = %f / b = %f\n", ax, bx);
+	ESP_LOGI(TAG, "a = %f / b = %f\n", ax, bx);
 	compute_calib(CIRCLE_OFFSET + CIRCLE_SIZE / 2 ,calib->point[0].y,
 		      calib->vres - CIRCLE_OFFSET - CIRCLE_SIZE / 2, calib->point[1].y,
 		      &ay, &by);
-	ESP_LOGD(TAG, "a = %f / b = %f\n", ay, by);
+	ESP_LOGI(TAG, "a = %f / b = %f\n", ay, by);
 	save_current_calibration();
 	/* setup-calibration data */
 	indev = lv_indev_get_act();
@@ -281,10 +281,10 @@ static int is_restore_calibration_succeed()
 	if (err)
 		goto cleanup;
 
-	ESP_LOGD(TAG, "restore ax = %f\n", ax);
-	ESP_LOGD(TAG, "restore bx = %f\n", bx);
-	ESP_LOGD(TAG, "restore ay = %f\n", ay);
-	ESP_LOGD(TAG, "restore by = %f\n", by);
+	ESP_LOGI(TAG, "restore ax = %f\n", ax);
+	ESP_LOGI(TAG, "restore bx = %f\n", bx);
+	ESP_LOGI(TAG, "restore ay = %f\n", ay);
+	ESP_LOGI(TAG, "restore by = %f\n", by);
 
 cleanup:
 	nvs_commit(hdl);
