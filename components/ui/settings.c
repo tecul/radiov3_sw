@@ -7,6 +7,10 @@
 #include "esp_log.h"
 #include "calibration.h"
 
+#define container_of(ptr, type, member) ({ \
+	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+	(type *)( (char *)__mptr - offsetof(type,member) );})
+
 static const char* TAG = "rv3.settings";
 
 typedef void (*cb)(lv_obj_t *scr, lv_event_t event);
@@ -20,11 +24,37 @@ enum ui_button {
 };
 
 struct settings_menu {
+	struct ui_cbs cbs;
 	lv_obj_t *prev_scr;
 	lv_obj_t *scr;
 	lv_obj_t *btn[UI_BTN_NB];
 	lv_obj_t *label[UI_BTN_NB];
 };
+
+static void settings_destroy(struct settings_menu *settings)
+{
+	lv_obj_del(settings->scr);
+	free(settings);
+}
+
+static void settings_back(struct ui_cbs *cbs)
+{
+	struct settings_menu *settings = container_of(cbs, struct settings_menu, cbs);
+
+	lv_disp_load_scr(settings->prev_scr);
+	settings_destroy(settings);
+}
+
+static void destroy_chained(struct ui_cbs *cbs)
+{
+	struct settings_menu *settings = container_of(cbs, struct settings_menu, cbs);
+	ui_hdl prev;
+
+	prev = lv_obj_get_user_data(settings->prev_scr);
+	prev->destroy_chained(prev);
+
+	settings_destroy(settings);
+}
 
 static void calibration_event_cb(lv_obj_t *scr, lv_event_t event)
 {
@@ -47,8 +77,7 @@ static void menu_event_cb(lv_obj_t *scr, lv_event_t event)
 	if( event != LV_EVENT_CLICKED)
 		return;
 
-	/* FIXME should destroy back to top menu */
-	settings_destroy(lv_obj_get_user_data(lv_disp_get_scr_act(NULL)));
+	destroy_chained(lv_obj_get_user_data(lv_disp_get_scr_act(NULL)));
 }
 
 static void back_event_cb(lv_obj_t *scr, lv_event_t event)
@@ -56,10 +85,10 @@ static void back_event_cb(lv_obj_t *scr, lv_event_t event)
 	if( event != LV_EVENT_CLICKED)
 		return;
 
-	settings_destroy(lv_obj_get_user_data(lv_disp_get_scr_act(NULL)));
+	settings_back(lv_obj_get_user_data(lv_disp_get_scr_act(NULL)));
 }
 
-void *settings_create()
+ui_hdl settings_create()
 {
 	const int sizes[UI_BTN_NB][2] = {
 		{120, 60}, {120, 60},
@@ -85,7 +114,7 @@ void *settings_create()
 	settings->prev_scr = lv_disp_get_scr_act(NULL);
 	settings->scr = lv_obj_create(NULL, NULL);
 	assert(settings->scr);
-	lv_obj_set_user_data(settings->scr, settings);
+	lv_obj_set_user_data(settings->scr, &settings->cbs);
 	lv_disp_load_scr(settings->scr);
 	lv_obj_set_size(settings->scr, 320, 240);
 
@@ -99,16 +128,7 @@ void *settings_create()
 		lv_label_set_text(settings->label[i], labels[i]);
 		lv_obj_set_event_cb(settings->btn[i], cbs[i]);
 	}
+	settings->cbs.destroy_chained = destroy_chained;
 
-	return settings;
-}
-
-void settings_destroy(void *hdl)
-{
-	struct settings_menu *settings = (struct settings_menu *) hdl;
-
-	lv_disp_load_scr(settings->prev_scr);
-	lv_obj_del(settings->scr);
-
-	free(settings);
+	return &settings->cbs;
 }

@@ -1,7 +1,8 @@
 #ifndef __SETTINGS__
 #define __SETTINGS__ 1
 
-void *settings_create(void);
-void settings_destroy(void *hdl);
+#include "ui.h"
+
+ui_hdl settings_create(void);
 
 #endif

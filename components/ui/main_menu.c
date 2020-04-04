@@ -6,6 +6,12 @@
 #include "lvgl/lvgl.h"
 #include "settings.h"
 
+#define container_of(ptr, type, member) ({ \
+	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+	(type *)( (char *)__mptr - offsetof(type,member) );})
+
+static ui_hdl instance;
+
 typedef void (*cb)(lv_obj_t *scr, lv_event_t event);
 
 enum ui_button {
@@ -16,6 +22,7 @@ enum ui_button {
 };
 
 struct main_menu {
+	struct ui_cbs cbs;
 	lv_obj_t *scr;
 	lv_obj_t *btn[UI_BTN_NB];
 	lv_obj_t *label[UI_BTN_NB];
@@ -45,7 +52,15 @@ static void settings_event_cb(lv_obj_t *scr, lv_event_t event)
 	settings_create();
 }
 
-void *main_menu_create()
+static void destroy_chained(struct ui_cbs *cbs)
+{
+	struct main_menu *menu = container_of(cbs, struct main_menu, cbs);
+
+	/* stop here and restore main menu screen */
+	lv_disp_load_scr(menu->scr);
+}
+
+ui_hdl main_menu_create()
 {
 	const int sizes[UI_BTN_NB][2] = {
 		{120, 60}, {120, 60}, {120, 60}
@@ -62,11 +77,16 @@ void *main_menu_create()
 	struct main_menu *menu;
 	unsigned int i;
 
+	if (instance)
+		return instance;
+
 	menu = malloc(sizeof(*menu));
 	if (!menu)
 		return NULL;
 
 	menu->scr = lv_obj_create(NULL, NULL);
+	assert(menu->scr);
+	lv_obj_set_user_data(menu->scr, &menu->cbs);
 	lv_disp_load_scr(menu->scr);
 	lv_obj_set_size(menu->scr, 320, 240);
 
@@ -80,6 +100,8 @@ void *main_menu_create()
 		lv_label_set_text(menu->label[i], labels[i]);
 		lv_obj_set_event_cb(menu->btn[i], cbs[i]);
 	}
+	menu->cbs.destroy_chained = destroy_chained;
+	instance = &menu->cbs;
 
-	return menu;
+	return instance;
 }
