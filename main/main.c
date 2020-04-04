@@ -16,6 +16,7 @@
 
 #include "calibration.h"
 #include "main_menu.h"
+#include "wifi.h"
 
 static const char* TAG = "rv3";
 
@@ -48,6 +49,10 @@ void app_main()
 		ret = nvs_flash_init();
 	}
 	ESP_ERROR_CHECK(ret);
+
+	ESP_LOGI(TAG, "setup wifi");
+	wifi_init();
+	wifi_connect_start();
 
 	ESP_LOGI(TAG, "display init");
 	/* display stack init */

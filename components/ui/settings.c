@@ -6,6 +6,7 @@
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 #include "calibration.h"
+#include "wifi_setting.h"
 
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
@@ -70,6 +71,7 @@ static void wifi_event_cb(lv_obj_t *scr, lv_event_t event)
 		return;
 
 	printf("You click on wifi button\n");
+	wifi_setting_create();
 }
 
 static void menu_event_cb(lv_obj_t *scr, lv_event_t event)
