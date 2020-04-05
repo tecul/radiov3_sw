@@ -23,7 +23,7 @@ extern "C" {
  *********************/
 #define XPT2046_IRQ CONFIG_LVGL_TOUCH_PIN_IRQ
 
-#define XPT2046_AVG 4
+#define XPT2046_AVG 5
 #define XPT2046_X_MIN       CONFIG_LVGL_TOUCH_X_MIN
 #define XPT2046_Y_MIN       CONFIG_LVGL_TOUCH_Y_MIN
 #define XPT2046_X_MAX       CONFIG_LVGL_TOUCH_X_MAX

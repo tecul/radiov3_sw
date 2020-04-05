@@ -54,6 +54,43 @@ void xpt2046_init(void)
 
 }
 
+static void xpt2046_read_value(int16_t * xx, int16_t * yy)
+{
+    const int nb = 1;
+    int loop_nb = nb;
+    uint8_t buf;
+
+    int16_t x_;
+    int16_t y_;
+    int32_t x = 0;
+    int32_t y = 0;
+
+    while (loop_nb--) {
+        gpio_set_level(TP_SPI_CS, 0);
+        tp_spi_xchg(CMD_X_READ);         /*Start x read*/
+
+        buf = tp_spi_xchg(0);           /*Read x MSB*/
+        x_ = buf << 8;
+        buf = tp_spi_xchg(CMD_Y_READ);  /*Until x LSB converted y command can be sent*/
+        x_ += buf;
+        x += x_;
+
+
+        buf =  tp_spi_xchg(0);   /*Read y MSB*/
+        y_ = buf << 8;
+
+        buf =  tp_spi_xchg(0);   /*Read y LSB*/
+        y_ += buf;
+        y += y_;
+        gpio_set_level(TP_SPI_CS, 1);
+    }
+    x = x / nb;
+    y = y / nb;
+
+    *xx = x >> 3;
+    *yy = y >> 3;
+}
+
 /**
  * Get the current position and state of the touchpad
  * @param data store the read data here
@@ -65,7 +102,6 @@ bool xpt2046_read(lv_indev_drv_t * drv, lv_indev_data_t * data)
     static int16_t last_x = 0;
     static int16_t last_y = 0;
     bool valid = true;
-    uint8_t buf;
 
     int16_t x = 0;
     int16_t y = 0;
@@ -73,34 +109,19 @@ bool xpt2046_read(lv_indev_drv_t * drv, lv_indev_data_t * data)
     uint8_t irq = gpio_get_level(XPT2046_IRQ);
 
     if (irq == 0) {
-        gpio_set_level(TP_SPI_CS, 0);
-        tp_spi_xchg(CMD_X_READ);         /*Start x read*/
-
-        buf = tp_spi_xchg(0);           /*Read x MSB*/
-        x = buf << 8;
-        buf = tp_spi_xchg(CMD_Y_READ);  /*Until x LSB converted y command can be sent*/
-        x += buf;
-
-        buf =  tp_spi_xchg(0);   /*Read y MSB*/
-        y = buf << 8;
-
-        buf =  tp_spi_xchg(0);   /*Read y LSB*/
-        y += buf;
-        gpio_set_level(TP_SPI_CS, 1);
-
-        /*Normalize Data*/
-        x = x >> 3;
-        y = y >> 3;
-        //printf("raw x = %d / y = %d\n", x, y);
+        xpt2046_read_value(&x, &y);
         xpt2046_corr(&x, &y);
-        //printf("corr x = %d / y = %d\n", x, y);
         xpt2046_avg(&x, &y);
-        //printf("x = %d / y = %d\n", x, y);
-        last_x = x;
-        last_y = y;
         if (is_first) {
             valid = false;
             is_first = 0;
+        }
+        /* only valid value when we got all values */
+        if (avg_last < XPT2046_AVG)
+            valid = false;
+        else {
+            last_x = x;
+            last_y = y;
         }
     } else {
         x = last_x;
@@ -154,27 +175,36 @@ static void xpt2046_corr(int16_t * x, int16_t * y)
 
 static void xpt2046_avg(int16_t * x, int16_t * y)
 {
-    /*Shift out the oldest data*/
+    int32_t x_sum = 0;
+    int32_t y_sum = 0;
     uint8_t i;
+
+    /* code below only work if we got at least 5 values in buffer */
+    assert(XPT2046_AVG >= 5);
+
+    /*Shift out the oldest data*/
     for(i = XPT2046_AVG - 1; i > 0 ; i--) {
         avg_buf_x[i] = avg_buf_x[i - 1];
         avg_buf_y[i] = avg_buf_y[i - 1];
     }
-
     /*Insert the new point*/
     avg_buf_x[0] = *x;
     avg_buf_y[0] = *y;
-    if(avg_last < XPT2046_AVG) avg_last++;
 
-    /*Sum the x and y coordinates*/
-    int32_t x_sum = 0;
-    int32_t y_sum = 0;
-    for(i = 0; i < avg_last ; i++) {
+    if (avg_last < XPT2046_AVG)
+        avg_last++;
+
+    /* we just return if we didn't got all values */
+    if (avg_last < XPT2046_AVG)
+        return ;
+
+    /*Sum the x and y coordinates . We remove 2 first and 2 last points */
+    for (i = 2; i < XPT2046_AVG - 2 ; i++) {
         x_sum += avg_buf_x[i];
         y_sum += avg_buf_y[i];
     }
 
     /*Normalize the sums*/
-    (*x) = (int32_t)x_sum / avg_last;
-    (*y) = (int32_t)y_sum / avg_last;
+    (*x) = (int32_t)x_sum / (XPT2046_AVG - 4);
+    (*y) = (int32_t)y_sum / (XPT2046_AVG - 4);
 }
