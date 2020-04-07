@@ -17,6 +17,7 @@
 #include "calibration.h"
 #include "main_menu.h"
 #include "wifi.h"
+#include "audio.h"
 
 static const char* TAG = "rv3";
 
@@ -53,6 +54,10 @@ void app_main()
 	ESP_LOGI(TAG, "setup wifi");
 	wifi_init();
 	wifi_connect_start();
+
+	/* setup audio stack */
+	ESP_LOGI(TAG, "setup audio");
+	audio_init();
 
 	ESP_LOGI(TAG, "display init");
 	/* display stack init */

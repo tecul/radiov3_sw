@@ -6,6 +6,9 @@
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 
+#include "radio_player.h"
+#include "wifi.h"
+
 #define ARRAY_SIZE(a)		(sizeof(a)/sizeof(a[0]))
 
 const char *radio_labels[] = {"RADIO ISA", "RTL2", "FRANCE INFO", "EUROPE 1",
@@ -103,8 +106,14 @@ static void handle_radio_select_event(struct radio_menu *radio, int index)
 {
 	int radio_nb = radio->page_nb * 3 + index;
 
+	if (!wifi_is_connected()) {
+		ESP_LOGW(TAG, "wifi not yet connected");
+		return ;
+	}
+
 	ESP_LOGI(TAG, "select radio %s\n", radio_labels[radio_nb]);
-	
+	radio_player_create(radio_labels[radio_nb], radio_urls[radio_nb].url,
+			    radio_urls[radio_nb].port_nb, radio_urls[radio_nb].path);
 }
 
 static enum menu_button get_btn_id_from_obj(struct radio_menu *radio, lv_obj_t *btn)
