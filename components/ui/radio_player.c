@@ -1,5 +1,7 @@
 #include "radio_player.h"
 
+#include <assert.h>
+
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 

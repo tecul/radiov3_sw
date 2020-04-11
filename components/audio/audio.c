@@ -82,7 +82,7 @@ void audio_init()
 	assert(init_i2c0() == 0);
 	assert(init_i2s0() == 0);
 
-	buffer_hdl = ring_create(16);
+	buffer_hdl = ring_create(144);
 	assert(buffer_hdl);
 	stb350_hdl = stb350_create(I2C_NUM_0, I2S_NUM_0, 26);
 	assert(stb350_hdl);
