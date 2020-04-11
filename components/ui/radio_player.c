@@ -80,7 +80,9 @@ static void radio_player_event_cb(lv_obj_t *btn, lv_event_t event)
 	struct radio_player *player = get_radio_player();
 	enum radio_player_button btn_id = get_btn_id_from_obj(player, btn);
 
-	if( event != LV_EVENT_CLICKED)
+	if( event != LV_EVENT_CLICKED && event != LV_EVENT_LONG_PRESSED_REPEAT)
+		return;
+	if (event == LV_EVENT_LONG_PRESSED_REPEAT && btn_id != RADIO_PLAYER_UP && btn_id != RADIO_PLAYER_DOWN)
 		return;
 
 	switch (btn_id) {

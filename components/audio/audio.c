@@ -15,7 +15,8 @@
 
 #define I2S_DMA_SAMPLE_BUFFER_SZ	576
 #define MAX_VOLUME			0
-#define MIN_VOLUME			8
+#define MIN_VOLUME			16
+#define STEP_VOLUME			7
 
 static void *stb350_hdl;
 static void *socket_hdl;
@@ -23,7 +24,7 @@ static void *buffer_hdl;
 static void *decoder_hdl;
 
 static int is_playing = 0;
-static int volume = 3;
+static int volume = 8;
 
 static int init_i2c0()
 {
@@ -91,7 +92,7 @@ void audio_init()
 	decoder_hdl = maddec_create(buffer_hdl, stb350_hdl);
 	assert(decoder_hdl);
 	assert(stb350_init(stb350_hdl) == 0);
-	assert(stb350_set_volume(stb350_hdl, volume * 16) == 0);
+	assert(stb350_set_volume(stb350_hdl, volume * STEP_VOLUME) == 0);
 	printf("audio init done\n");
 }
 
@@ -125,7 +126,7 @@ int audio_sound_level_up()
 	volume--;
 	volume = MAX(MAX_VOLUME, volume);
 
-	assert(stb350_set_volume(stb350_hdl, volume * 16) == 0);
+	assert(stb350_set_volume(stb350_hdl, volume * STEP_VOLUME) == 0);
 
 	return audio_sound_get_level();
 }
@@ -135,7 +136,7 @@ int audio_sound_level_down()
 	volume++;
 	volume = MIN(MIN_VOLUME, volume);
 
-	assert(stb350_set_volume(stb350_hdl, volume * 16) == 0);
+	assert(stb350_set_volume(stb350_hdl, volume * STEP_VOLUME) == 0);
 
 	return audio_sound_get_level();
 }
