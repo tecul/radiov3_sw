@@ -120,17 +120,16 @@ static void setup_new_screen(struct radio_player *player)
 	assert(player->scr);
 	lv_obj_set_user_data(player->scr, &player->cbs);
 	lv_disp_load_scr(player->scr);
-	lv_obj_set_size(player->scr, 320, 240);
 }
 
 static void radio_player_screen(struct radio_player *player, const char *radio_label,
 				const char *url, const char * port_nb, const char *path)
 {
 	const int sizes[RADIO_PLAYER_NB][2] = {
-		{60, 60}, {60, 60}, {60, 60}, {60, 60}
+		{60, 55}, {60, 55}, {60, 55}, {60, 55}
 	};
 	const lv_point_t pos[RADIO_PLAYER_NB] = {
-		{20, 15}, {20, 165}, {240, 15}, {240, 165}
+		{20, 24}, {20, 168}, {240, 24}, {240, 168}
 	};
 	const char *labels[RADIO_PLAYER_NB] = {
 		"MENU", "BACK", "UP", "DOWN"
@@ -166,14 +165,15 @@ static void radio_player_screen(struct radio_player *player, const char *radio_l
 	player->bar_level = lv_bar_create(player->scr, NULL);
 	assert(player->bar_level);
 	lv_bar_set_range(player->bar_level, 0, 100);
-	lv_obj_set_size(player->bar_level, 15, 240);
+	lv_obj_set_size(player->bar_level, 15, 225);
+	lv_obj_set_pos(player->bar_level, 0, 15);
 	lv_bar_set_style(player->bar_level, LV_BAR_STYLE_BG, &lv_style_transp);
 
 	player->sound_level = lv_bar_create(player->scr, NULL);
 	assert(player->sound_level);
 	lv_bar_set_range(player->sound_level, 0, audio_sound_get_max_level());
-	lv_obj_set_size(player->sound_level, 15, 240);
-	lv_obj_set_pos(player->sound_level, 305, 0);
+	lv_obj_set_size(player->sound_level, 15, 225);
+	lv_obj_set_pos(player->sound_level, 305, 15);
 	lv_bar_set_style(player->sound_level, LV_BAR_STYLE_BG, &lv_style_transp);
 	lv_bar_set_value(player->sound_level, audio_sound_get_level(), LV_ANIM_OFF);
 

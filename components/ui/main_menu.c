@@ -6,6 +6,7 @@
 #include "lvgl/lvgl.h"
 #include "settings.h"
 #include "radio_menu.h"
+#include "system_menu.h"
 
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
@@ -27,6 +28,7 @@ struct main_menu {
 	lv_obj_t *scr;
 	lv_obj_t *btn[UI_BTN_NB];
 	lv_obj_t *label[UI_BTN_NB];
+	ui_hdl system_menu;
 };
 
 static void radio_event_cb(lv_obj_t *scr, lv_event_t event)
@@ -64,10 +66,10 @@ static void destroy_chained(struct ui_cbs *cbs)
 ui_hdl main_menu_create()
 {
 	const int sizes[UI_BTN_NB][2] = {
-		{120, 60}, {120, 60}, {120, 60}
+		{120, 55}, {120, 55}, {120, 55}
 	};
 	const lv_point_t pos[UI_BTN_NB] = {
-		{100, 15}, {100, 90}, {100, 165}
+		{100, 24}, {100, 96}, {100, 168}
 	};
 	const char *labels[UI_BTN_NB] = {
 		"radio", "music", "settings"
@@ -103,6 +105,8 @@ ui_hdl main_menu_create()
 	}
 	menu->cbs.destroy_chained = destroy_chained;
 	instance = &menu->cbs;
+
+	menu->system_menu = system_menu_create();
 
 	return instance;
 }

@@ -139,7 +139,7 @@ static void setup_new_screen(struct wifi_setting_menu *wifi)
 static void setup_pwd_screen(struct wifi_setting_menu *wifi)
 {
 	const int sizes[KB_BTN_NB][2] = {
-		{60, 60}, {60, 60}, {60, 60}, {60, 60}, {120, 60}
+		{60, 55}, {60, 55}, {60, 55}, {60, 55}, {120, 55}
 	};
 	const lv_point_t pos[KB_BTN_NB] = {
 		{10, 80}, {130, 80}, {250, 80},
@@ -155,6 +155,7 @@ static void setup_pwd_screen(struct wifi_setting_menu *wifi)
 	wifi->ta = lv_ta_create(wifi->scr, NULL);
 	lv_ta_set_one_line(wifi->ta, true);
 	lv_obj_align(wifi->ta, NULL, LV_ALIGN_IN_TOP_MID, 0, 10);
+	lv_obj_set_y(wifi->ta, 24);
 	lv_ta_set_text(wifi->ta, "");
 
 	wifi->kb_current[0] = labels[KB_CHAR][0];
@@ -192,10 +193,10 @@ static void setup_ssid_screen(struct wifi_setting_menu *wifi,
 	wifi_ap_record_t *ap_list_buffer, uint16_t ap_nb)
 {
 	const int sizes[3][2] = {
-		{120, 60}, {120, 60}, {120, 60}
+		{120, 55}, {120, 55}, {120, 55}
 	};
 	const lv_point_t pos[3] = {
-		{100, 15}, {100, 90}, {100, 165}
+		{100, 24}, {100, 96}, {100, 168}
 	};
 	int i;
 

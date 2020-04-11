@@ -93,12 +93,12 @@ static void back_event_cb(lv_obj_t *scr, lv_event_t event)
 ui_hdl settings_create()
 {
 	const int sizes[UI_BTN_NB][2] = {
-		{120, 60}, {120, 60},
-		{60, 60}, {60, 60}
+		{120, 55}, {120, 55},
+		{60, 55}, {60, 55}
 	};
 	const lv_point_t pos[UI_BTN_NB] = {
-		{100, 15}, {100, 90},
-		{20, 15}, {20, 165}
+		{100, 24}, {100, 96},
+		{20, 24}, {20, 168}
 	};
 	const char *labels[UI_BTN_NB] = {
 		"touch screen", "wifi", "menu", "back"

@@ -173,12 +173,12 @@ static void setup_new_screen(struct radio_menu *radio)
 static void setup_radio_menu(struct radio_menu *radio)
 {
 	const int sizes[MENU_BTN_NB][2] = {
-		{60, 60}, {60, 60}, {60, 60}, {60, 60},
-		{120, 60}, {120, 60}, {120, 60}
+		{60, 55}, {60, 55}, {60, 55}, {60, 55},
+		{120, 55}, {120, 55}, {120, 55}
 	};
 	const lv_point_t pos[MENU_BTN_NB] = {
-		{20, 15}, {20, 165}, {240, 15}, {240, 165},
-		{100, 15}, {100, 90}, {100, 165}
+		{20, 24}, {20, 168}, {240, 15}, {240, 168},
+		{100, 24}, {100, 96}, {100, 168}
 	};
 	int i;
 
