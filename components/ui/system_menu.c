@@ -7,6 +7,7 @@
 
 #include "lvgl/lvgl.h"
 #include "wifi.h"
+#include "sdcard.h"
 #include "esp_sntp.h"
 
 static ui_hdl instance;
@@ -56,6 +57,7 @@ static void task_level_cb(struct _lv_task_t *task)
 	}
 
 	lv_obj_set_hidden(system->wifi_label, !is_wifi_connected);
+	lv_obj_set_hidden(system->sd_card_label, !sdcard_is_present());
 
 	time(&now);
 	localtime_r(&now, &timeinfo);
