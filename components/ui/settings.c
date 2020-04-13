@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "calibration.h"
 #include "wifi_setting.h"
+#include "db.h"
 
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
@@ -19,6 +20,7 @@ typedef void (*cb)(lv_obj_t *scr, lv_event_t event);
 enum ui_button {
 	UI_BTN_CALIBRATION,
 	UI_BTN_WIFI,
+	UI_BTN_DB_UPDATE,
 	UI_MENU,
 	UI_BACK,
 	UI_BTN_NB
@@ -31,6 +33,11 @@ struct settings_menu {
 	lv_obj_t *btn[UI_BTN_NB];
 	lv_obj_t *label[UI_BTN_NB];
 };
+
+static void db_update_create()
+{
+	create_db("/sdcard/music.db", "/sdcard/Music");
+}
 
 static void settings_destroy(struct settings_menu *settings)
 {
@@ -70,8 +77,15 @@ static void wifi_event_cb(lv_obj_t *scr, lv_event_t event)
 	if( event != LV_EVENT_CLICKED)
 		return;
 
-	printf("You click on wifi button\n");
 	wifi_setting_create();
+}
+
+static void db_upate_cb(lv_obj_t *scr, lv_event_t event)
+{
+	if( event != LV_EVENT_CLICKED)
+		return;
+
+	db_update_create();
 }
 
 static void menu_event_cb(lv_obj_t *scr, lv_event_t event)
@@ -93,18 +107,19 @@ static void back_event_cb(lv_obj_t *scr, lv_event_t event)
 ui_hdl settings_create()
 {
 	const int sizes[UI_BTN_NB][2] = {
-		{120, 55}, {120, 55},
+		{120, 55}, {120, 55}, {120, 55},
 		{60, 55}, {60, 55}
 	};
 	const lv_point_t pos[UI_BTN_NB] = {
-		{100, 24}, {100, 96},
+		{100, 24}, {100, 96}, {100, 168},
 		{20, 24}, {20, 168}
 	};
 	const char *labels[UI_BTN_NB] = {
-		"touch screen", "wifi", "menu", "back"
+		"touch screen", "wifi", "database update", "menu", "back"
 	};
 	const cb cbs[] = {
-		calibration_event_cb, wifi_event_cb, menu_event_cb, back_event_cb
+		calibration_event_cb, wifi_event_cb, db_upate_cb, menu_event_cb,
+		back_event_cb
 	};
 	struct settings_menu *settings;
 	unsigned int i;
