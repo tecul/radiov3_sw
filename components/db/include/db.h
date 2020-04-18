@@ -1,21 +1,22 @@
 #ifndef __DB__
 #define __DB__ 1
 
-int create_db(char *filename, char *root_dir);
+#include "id3.h"
 
-void *open_db(char *filename);
-void close_db(void *db_hdl);
-int get_artist_nb(void);
-void *get_artist(int index);
-char *get_artist_name(void *artist_hdl);
-int get_album_nb(void *artist_hdl);
-void *get_album(void *artist_hdl, int index);
-char *get_album_name(void *album_hdl);
-int get_song_nb(void *album_hdl);
-void *get_song(void *album_hdl, int index);
-char *get_song_name(void *song_hdl);
-char *get_song_filename(void *song_hdl);
-char *get_song_artist_name(void *song_hdl);
-char *get_song_album_name(void *song_hdl);
+int update_db(char *dirname, char *root_dir);
+
+void *db_open(char *dirname);
+void db_close(void *hdl);
+int db_artist_get_nb(void *hdl);
+char *db_artist_get(void *hdl, int index);
+int db_album_get_nb(void *hdl, char *artist);
+char *db_album_get(void *hdl, char *artist, int index);
+int db_song_get_nb(void *hdl, char *artist, char *album);
+char *db_song_get(void *hdl, char *artist, char *album, int index);
+char *db_song_get_filepath(void *hdl, char *artist, char *album, char *song);
+int db_song_get_meta(void *hdl, char *artist, char *album, char *song, struct id3_meta *meta);
+
+void db_put_item(void *hdl, char *name);
+void db_put_meta(void *hdl, struct id3_meta *meta);
 
 #endif

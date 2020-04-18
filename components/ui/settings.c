@@ -36,7 +36,7 @@ struct settings_menu {
 
 static void db_update_create()
 {
-	create_db("/sdcard/music.db", "/sdcard/Music");
+	update_db("/sdcard/music.db", "/sdcard/Music");
 }
 
 static void settings_destroy(struct settings_menu *settings)
