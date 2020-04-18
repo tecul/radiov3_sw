@@ -7,6 +7,7 @@
 #include "settings.h"
 #include "radio_menu.h"
 #include "system_menu.h"
+#include "artist_menu.h"
 
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
@@ -44,7 +45,7 @@ static void music_event_cb(lv_obj_t *scr, lv_event_t event)
 	if( event != LV_EVENT_CLICKED)
 		return;
 
-	printf("You click on music button\n");
+	artist_menu_create();
 }
 
 static void settings_event_cb(lv_obj_t *scr, lv_event_t event)
