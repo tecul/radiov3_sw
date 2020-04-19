@@ -7,6 +7,7 @@
 
 #include "stb350.h"
 #include "fetch_socket_radio.h"
+#include "fetch_file.h"
 #include "ring.h"
 #include "maddec.h"
 
@@ -20,10 +21,12 @@
 
 static void *stb350_hdl;
 static void *socket_hdl;
+static void *file_hdl;
 static void *buffer_hdl;
 static void *decoder_hdl;
 
 static int is_playing = 0;
+static int is_music_playing = 0;
 static int volume = 8;
 
 static int init_i2c0()
@@ -89,6 +92,8 @@ void audio_init()
 	assert(stb350_hdl);
 	socket_hdl = fetch_socket_radio_create(buffer_hdl);
 	assert(socket_hdl);
+	file_hdl = fetch_file_create(buffer_hdl);
+	assert(file_hdl);
 	decoder_hdl = maddec_create(buffer_hdl, stb350_hdl);
 	assert(decoder_hdl);
 	assert(stb350_init(stb350_hdl) == 0);
@@ -119,6 +124,31 @@ void audio_radio_stop()
 	ring_reset(buffer_hdl);
 
 	is_playing = 0;
+}
+
+void audio_music_play(char *filepath)
+{
+	if (is_music_playing)
+		audio_music_stop();
+
+	assert(stb350_start(stb350_hdl) == 0);
+	fetch_file_start(file_hdl, filepath);
+	maddec_start(decoder_hdl);
+
+	is_music_playing = 1;
+}
+
+void audio_music_stop()
+{
+	if (!is_music_playing)
+		return ;
+
+	maddec_stop(decoder_hdl);
+	fetch_file_stop(file_hdl);
+	stb350_stop(stb350_hdl);
+	ring_reset(buffer_hdl);
+
+	is_music_playing = 0;
 }
 
 int audio_sound_level_up()

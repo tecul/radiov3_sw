@@ -8,6 +8,8 @@
 
 #include "db.h"
 #include "paging_menu.h"
+#include "music_player.h"
+#include "playlist.h"
 
 static const char* TAG = "rv3.song_menu";
 
@@ -39,8 +41,12 @@ static void song_put_item_label(void *ctx, char *item_label)
 static void song_select_item(void *ctx, char *selected_label, int index)
 {
 	struct song_menu *menu = ctx;
+	void *playlist_hdl;
 
 	ESP_LOGI(TAG, "selected %s", selected_label);
+	playlist_hdl = playlist_create(menu->db_hdl);
+	playlist_add_song(playlist_hdl, menu->artist, menu->album, selected_label);
+	music_player_create(playlist_hdl);
 }
 
 static struct paging_cbs cbs = {
@@ -64,6 +70,7 @@ ui_hdl song_menu_create(void *db_hdl, char *artist, char *album)
 	menu->db_hdl = db_hdl;
 	menu->artist = artist;
 	menu->album = album;
+	ESP_LOGI(TAG, "db_hdl = %p/%p", db_hdl, menu->db_hdl);
 	song_nb = db_song_get_nb(menu->db_hdl, artist, album);
 	paging = paging_menu_create(song_nb, &cbs, menu);
 	if (!paging) {
