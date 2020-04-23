@@ -45,6 +45,7 @@ static void song_select_item(void *ctx, char *selected_label, int index)
 
 	ESP_LOGI(TAG, "selected %s", selected_label);
 	playlist_hdl = playlist_create(menu->db_hdl);
+	assert(playlist_hdl);
 	playlist_add_song(playlist_hdl, menu->artist, menu->album, selected_label);
 	music_player_create(playlist_hdl);
 }

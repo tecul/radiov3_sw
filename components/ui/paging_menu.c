@@ -108,14 +108,32 @@ static void paging_menu_setup_page(struct paging_menu *menu, int page_nb)
 		lv_obj_set_hidden(menu->btn[btn_id], true);
 }
 
-static void paging_menu_event_cb(lv_obj_t *btn, lv_event_t event)
+static void paging_menu_event_long_pressed_cb(struct paging_menu *menu, enum menu_button btn_id)
 {
-	struct paging_menu *menu = get_paging_menu();
-	enum menu_button btn_id = get_btn_id_from_obj(menu, btn);
-
-	if (event != LV_EVENT_CLICKED)
+	if (!menu->client_cbs->long_select_item)
 		return;
 
+	switch (btn_id) {
+	case MENU_MENU:
+	case MENU_BACK:
+	case MENU_UP:
+	case MENU_DOWN:
+		break;
+	case MENU_BTN_0:
+	case MENU_BTN_1:
+	case MENU_BTN_2:
+		ESP_LOGI(TAG, "You select %s", lv_label_get_text(menu->label[btn_id]));
+		menu->client_cbs->long_select_item(menu->ctx,
+						   lv_label_get_text(menu->label[btn_id]),
+						   menu->page_nb * 3 + btn_id - MENU_BTN_0);
+		break;
+	default:
+		assert(0);
+	}
+}
+
+static void paging_menu_event_clicked_cb(struct paging_menu *menu, enum menu_button btn_id)
+{
 	switch (btn_id) {
 	case MENU_MENU:
 		destroy_chained(&menu->cbs);
@@ -140,6 +158,20 @@ static void paging_menu_event_cb(lv_obj_t *btn, lv_event_t event)
 	default:
 		assert(0);
 	}
+}
+
+static void paging_menu_event_cb(lv_obj_t *btn, lv_event_t event)
+{
+	struct paging_menu *menu = get_paging_menu();
+	enum menu_button btn_id = get_btn_id_from_obj(menu, btn);
+
+	if (event != LV_EVENT_CLICKED && event !=LV_EVENT_LONG_PRESSED)
+		return;
+
+	if (event == LV_EVENT_LONG_PRESSED)
+		paging_menu_event_long_pressed_cb(menu, btn_id);
+	else
+		paging_menu_event_clicked_cb(menu, btn_id);
 }
 
 static void setup_new_screen(struct paging_menu *menu)

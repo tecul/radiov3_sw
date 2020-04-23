@@ -44,6 +44,9 @@ void playlist_destroy(void *hdl)
 	while (current) {
 		ESP_LOGI(TAG , " destroy playlist item %p/%p | %s/%s/%s", playlist, current, current->artist, current->album, current->title);
 		next = current->next;
+		free(current->artist);
+		free(current->album);
+		free(current->title);
 		free(current);
 		current = next;
 	}
@@ -61,9 +64,9 @@ int playlist_add_song(void *hdl, char *artist, char *album, char *title)
 		return -1;
 
 	new->next = playlist->root;
-	new->artist = artist;
-	new->album = album;
-	new->title = title;
+	new->artist = strdup(artist);
+	new->album = strdup(album);
+	new->title = strdup(title);
 
 	playlist->root = new;
 

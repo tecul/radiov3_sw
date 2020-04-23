@@ -8,6 +8,8 @@
 #include "audio.h"
 #include "playlist.h"
 
+static const char* TAG = "rv3.music_player";
+
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
 	(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -122,6 +124,7 @@ static void start_next_song(struct music_player *player)
 	int ret;
 
 	ret = playlist_next(player->playlist_hdl, &item);
+	ESP_LOGI(TAG, "start_next_song ret = %d\n", ret);
 	if (ret) {
 		player->state = STATE_PLAYLIST_DONE;
 		return ;

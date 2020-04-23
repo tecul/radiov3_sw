@@ -8,6 +8,7 @@ struct paging_cbs {
 	char *(*get_item_label)(void *ctx, int index);
 	void (*put_item_label)(void *ctx, char *item_label);
 	void (*select_item)(void *ctx, char *selected_label, int index);
+	void (*long_select_item)(void *ctx, char *selected_label, int index);
 	int (*is_root)(void *ctx);
 };
 
