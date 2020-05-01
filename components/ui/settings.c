@@ -9,12 +9,53 @@
 #include "wifi_setting.h"
 #include "db.h"
 #include "paging_menu.h"
+#include "web_server.h"
+#include "wifi.h"
 
 #define ARRAY_SIZE(a)		(sizeof(a)/sizeof(a[0]))
 
 static const char* TAG = "rv3.settings";
 
-const char *settings_labels[] = {"touch screen", "wifi", "database update"};
+static const char *btns[] ={"Stop web server", ""};
+static lv_style_t modal_style;
+static lv_obj_t *mbox;
+
+static void web_server_event_handler(lv_obj_t * obj, lv_event_t event)
+{
+	if (event == LV_EVENT_DELETE && obj == mbox) {
+		lv_obj_del_async(lv_obj_get_parent(mbox));
+		mbox = NULL;
+	} else if (event == LV_EVENT_VALUE_CHANGED) {
+		web_server_stop();
+		lv_mbox_start_auto_close(mbox, 0);
+	}
+}
+
+static void display_web_server_message()
+{
+	char msg[128];
+	lv_obj_t *obj;
+
+	lv_style_copy(&modal_style, &lv_style_plain_color);
+	modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_BLACK;
+	modal_style.body.opa = LV_OPA_50;
+
+	obj = lv_obj_create(lv_scr_act(), NULL);
+	lv_obj_set_style(obj, &modal_style);
+	lv_obj_set_pos(obj, 0, 0);
+	lv_obj_set_size(obj, LV_HOR_RES, LV_VER_RES);
+
+	mbox = lv_mbox_create(obj, NULL);
+	lv_obj_set_width(mbox, LV_HOR_RES - 40);
+	snprintf(msg, sizeof(msg), "Connect to %s:8000", wifi_get_ip());
+	lv_mbox_set_text(mbox, msg);
+	lv_mbox_add_btns(mbox, btns);
+	lv_obj_align(mbox, NULL, LV_ALIGN_CENTER, 0, 0);
+	lv_obj_set_event_cb(mbox, web_server_event_handler);
+}
+
+const char *settings_labels[] = {"start web server", "database update", "wifi",
+	"touch screen"};
 
 static char *settings_get_item_label(void *ctx, int index)
 {
@@ -26,14 +67,20 @@ static void settings_select_item(void *ctx, char *selected_label, int index)
 	ESP_LOGI(TAG, "select index %d\n", index);
 
 	switch (index) {
-	case 0:
+	case 3:
 		calibration_start();
 		break;
-	case 1:
+	case 2:
 		wifi_setting_create();
 		break;
-	case 2:
+	case 1:
 		update_db("/sdcard/music.db", "/sdcard/Music");
+		break;
+	case 0:
+		if (!wifi_is_connected())
+			break;
+		web_server_start();
+		display_web_server_message();
 		break;
 	default:
 		ESP_LOGE(TAG, "unknown index %d", index);

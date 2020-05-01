@@ -18,6 +18,7 @@ static const char *TAG = "rv3.wifi";
 
 const int WIFI_CONNECTED_BIT = BIT0;
 static EventGroupHandle_t wifi_event_group;
+static ip4_addr_t ip;
 static void (*wifi_scan_done_cb)(void *);
 static void *wifi_scan_done_cb_arg;
 static int is_wifi_init_done;
@@ -35,6 +36,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 	case SYSTEM_EVENT_STA_GOT_IP:
 		ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP: %s",
 			 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+		ip = event->event_info.got_ip.ip_info.ip;
 		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
 		break;
 	case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -173,4 +175,12 @@ cleanup:
 int wifi_is_connected()
 {
 	return xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT;
+}
+
+char *wifi_get_ip()
+{
+	if (!wifi_is_connected())
+		return NULL;
+
+	return ip4addr_ntoa(&ip);
 }

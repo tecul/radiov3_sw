@@ -6,5 +6,6 @@ int wifi_connect_start(void);
 void wifi_scan_start(void (*wifi_scan_done_cb)(void *), void *arg);
 int wifi_set_credentials(char *ssid, char *pwd);
 int wifi_is_connected(void);
+char *wifi_get_ip(void);
 
 #endif
