@@ -16,7 +16,7 @@ static const char* TAG = "rv3.web_server";
 static const struct mg_str s_get_method = MG_MK_STR("GET");
 static const struct mg_str s_post_method = MG_MK_STR("POST");
 static const struct mg_str s_delete_method = MG_MK_STR("DELETE");
-static const char *music_root = "/sdcard/Music";
+static const char *sdcard_root = "/sdcard";
 
 typedef int (*cb_handle)(struct mg_connection *nc, char *path);
 
@@ -116,7 +116,7 @@ static void handle_cb(struct mg_connection *nc, struct http_message *hm,
 	path = strndup(cmd->p, cmd->len);
 	if (!path)
 		goto internal_error;
-	full_path = concat((char *) music_root, path);
+	full_path = concat((char *) sdcard_root, path);
 	if (!full_path)
 		goto internal_error;
 
@@ -149,6 +149,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
 	static const struct mg_str dir_api_prefix = MG_MK_STR("/api/v1/dir");
 	static const struct mg_str file_api_prefix = MG_MK_STR("/api/v1/file");
+	struct mg_serve_http_opts opts = { .document_root = "/sdcard/static"};
 	struct http_message *hm = (struct http_message *) ev_data;
 	struct mg_str cmd;
 
@@ -173,7 +174,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 			else
 				goto not_found;
 		} else
-			goto not_found;
+			mg_serve_http(nc, hm, opts);
 		break;
 	default:
 		break;
@@ -195,7 +196,7 @@ static struct mg_str upload_fname(struct mg_connection *nc, struct mg_str fname)
 	path = strndup(fname.p, fname.len);
 	if (!path)
 		goto error;
-	full_path = concat((char *) music_root, path);
+	full_path = concat((char *) sdcard_root, path);
 	if (!full_path)
 		goto error;
 
