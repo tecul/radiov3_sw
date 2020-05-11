@@ -69,7 +69,10 @@ void *fetch_file_create(void *buffer_hdl)
 
 void fetch_file_destroy(void *hdl)
 {
+	struct fetch_file *self = hdl;
 	assert(hdl);
+
+	vSemaphoreDelete(self->sem_en_of_task);
 
 	free(hdl);
 }

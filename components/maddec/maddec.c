@@ -166,6 +166,7 @@ void maddec_destroy(void *hdl)
 
 	assert(hdl);
 	mad_decoder_finish(&self->decoder);
+	vSemaphoreDelete(self->sem_en_of_task);
 
 	free(hdl);
 }

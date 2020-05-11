@@ -109,7 +109,10 @@ void *fetch_socket_radio_create(void *buffer_hdl)
 
 void fetch_socket_radio_destroy(void *hdl)
 {
+	struct fetch_socket_radio *self = hdl;
 	assert(hdl);
+
+	vSemaphoreDelete(self->sem_en_of_task);
 
 	free(hdl);
 }
