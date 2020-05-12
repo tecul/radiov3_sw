@@ -25,6 +25,7 @@ struct db_info {
 
 struct db_builder {
 	char *dirname;
+	char *root_dir;
 };
 
 struct db {
@@ -105,22 +106,15 @@ static char *concat4(char *str1, char *str2, char *str3, char *str4)
 	return res;
 }
 
-static int read_db_info(void *hdl, char *artist, char *album, char *song, struct db_info *db_info)
+static int read_db_info_by_filename(char *filename, struct db_info *db_info)
 {
-	struct db *db = hdl;
 	char *buffer_init;
 	char *buffer;
-	char *dirname;
 	off_t len;
-	int fd;
 	int ret;
+	int fd;
 
-	dirname = concat4(db->dirname, artist, album, song);
-	if (!dirname)
-		return -1;
-
-	fd = open(dirname, O_RDONLY);
-	free(dirname);
+	fd = open(filename, O_RDONLY);
 	if (fd < 0)
 		return -1;
 
@@ -149,9 +143,10 @@ static int read_db_info(void *hdl, char *artist, char *album, char *song, struct
 	buffer += strlen(db_info->filepath) + 1;
 	db_info->meta.artist = strdup(buffer);
 	buffer += strlen(db_info->meta.artist) + 1;
-	db_info->meta.title = strdup(song);
 	db_info->meta.album = strdup(buffer);
 	buffer += strlen(db_info->meta.album) + 1;
+	db_info->meta.title = strdup(buffer);
+	buffer += strlen(db_info->meta.title) + 1;
 	db_info->meta.track_nb = atoi(buffer);
 	buffer += strlen(buffer) + 1;
 	db_info->meta.duration_in_ms = atoi(buffer);
@@ -159,6 +154,22 @@ static int read_db_info(void *hdl, char *artist, char *album, char *song, struct
 	close(fd);
 
 	return 0;
+}
+
+static int read_db_info(void *hdl, char *artist, char *album, char *song, struct db_info *db_info)
+{
+	struct db *db = hdl;
+	char *filename;
+	int ret;
+
+	filename = concat4(db->dirname, artist, album, song);
+	if (!filename)
+		return -1;
+
+	ret = read_db_info_by_filename(filename, db_info);
+	free(filename);
+
+	return ret;
 }
 
 static int walk_dir(char *root, walk_dir_entry_cb cb, void *arg)
@@ -293,6 +304,10 @@ static int builder_add_song(struct db_builder *builder, char *filename, struct i
 	if (ret != strlen(meta->album) + 1)
 		goto error;
 
+	ret = write(fd, meta->title, strlen(meta->title) + 1);
+	if (ret != strlen(meta->title) + 1)
+		goto error;
+
 	snprintf(buf, 32, "%d", meta->track_nb);
 	ret = write(fd, buf, strlen(buf) + 1);
 	if (ret != strlen(buf) + 1)
@@ -359,12 +374,66 @@ cleanup:
 	return 0;
 }
 
-static int builder_open(struct db_builder *builder, char *dirname)
+static char *dir_up(char *filename)
+{
+	char *pos = rindex(filename, '/');
+
+	if (!pos)
+		return NULL;
+
+	*pos = '\0';
+
+	return filename;
+}
+
+static void cleanup_from_filename(char *filename)
+{
+	unlink(filename);
+
+	ESP_LOGI(TAG, "remove %s", filename);
+	filename = dir_up(filename);
+	while (filename && strlen(filename) > 0) {
+		if (rmdir(filename))
+			break;
+		filename = dir_up(filename);
+	}
+}
+
+static int remove_old_song(char *dir, char *name, void *arg)
+{
+	struct db_info db_info;
+	char *filename;
+	int ret;
+
+	filename = concat(dir , name);
+	assert(filename);
+
+	ret = read_db_info_by_filename(filename, &db_info);
+	if (ret)
+		goto cleanup;
+
+	if (access(db_info.filepath, F_OK) == 0)
+		goto db_info_cleanup;
+
+	cleanup_from_filename(filename);
+
+db_info_cleanup:
+	id3_put(&db_info.meta);
+	free(db_info.filepath);
+
+cleanup:
+	free(filename);
+
+	return 0;
+}
+
+static int builder_open(struct db_builder *builder, char *dirname, char *root_dir)
 {
 	int ret;
 
 	/* FIXME : add case where dirname is a file ... */
 	builder->dirname = dirname;
+	builder->root_dir = root_dir;
 	ret = mkdir(dirname, 0777);
 	if (ret && errno != EEXIST) {
 		perror("");
@@ -384,7 +453,7 @@ int update_db(char *dirname, char *root_dir)
 	struct db_builder builder;
 	int ret;
 
-	ret = builder_open(&builder, dirname);
+	ret = builder_open(&builder, dirname, root_dir);
 	if (ret) {
 		ESP_LOGE(TAG, "unable to create db %s", dirname);
 
@@ -394,6 +463,10 @@ int update_db(char *dirname, char *root_dir)
 	ret = walk_dir(root_dir, add_new_song, &builder);
 	if (ret)
 		ESP_LOGE(TAG, "failed to populate db %d", ret);
+
+	ret = walk_dir(dirname, remove_old_song, &builder);
+	if (ret)
+		ESP_LOGE(TAG, "failed to cleanup db %d", ret);
 
 	builder_close(&builder);
 
