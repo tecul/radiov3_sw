@@ -192,7 +192,7 @@ static void setup_paging_menu(struct paging_menu *menu)
 		{120, 55}, {120, 55}, {120, 55}
 	};
 	const lv_point_t pos[MENU_BTN_NB] = {
-		{20, 24}, {20, 168}, {240, 15}, {240, 168},
+		{20, 24}, {20, 168}, {240, 24}, {240, 168},
 		{100, 24}, {100, 96}, {100, 168}
 	};
 	int i;
@@ -209,6 +209,12 @@ static void setup_paging_menu(struct paging_menu *menu)
 		assert(menu->label);
 		lv_obj_set_event_cb(menu->btn[i], paging_menu_event_cb);
 	}
+	for (i = MENU_BTN_0; i < MENU_BTN_NB; i++) {
+		lv_label_set_long_mode(menu->label[i], LV_LABEL_LONG_SROLL);
+		lv_obj_set_width(menu->label[i], sizes[i][0]);
+		lv_label_set_align(menu->label[i], LV_LABEL_ALIGN_CENTER);
+	}
+
 	if (!menu->client_cbs->is_root || !menu->client_cbs->is_root(menu->ctx)) {
 		lv_obj_set_hidden(menu->btn[MENU_MENU], false);
 		lv_label_set_text(menu->label[MENU_MENU], "MENU");
