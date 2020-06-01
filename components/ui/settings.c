@@ -11,6 +11,7 @@
 #include "paging_menu.h"
 #include "web_server.h"
 #include "wifi.h"
+#include "ota_update.h"
 
 #define ARRAY_SIZE(a)		(sizeof(a)/sizeof(a[0]))
 
@@ -54,8 +55,8 @@ static void display_web_server_message()
 	lv_obj_set_event_cb(mbox, web_server_event_handler);
 }
 
-const char *settings_labels[] = {"start web server", "database update", "wifi",
-	"touch screen"};
+const char *settings_labels[] = {"start web server", "database update", "fw update",
+	"wifi", "touch screen"};
 
 static char *settings_get_item_label(void *ctx, int index)
 {
@@ -67,11 +68,16 @@ static void settings_select_item(void *ctx, char *selected_label, int index)
 	ESP_LOGI(TAG, "select index %d\n", index);
 
 	switch (index) {
-	case 3:
+	case 4:
 		calibration_start();
 		break;
-	case 2:
+	case 3:
 		wifi_setting_create();
+		break;
+	case 2:
+		if (!wifi_is_connected())
+			break;
+		ota_update();
 		break;
 	case 1:
 		update_db("/sdcard/music.db", "/sdcard/Music");
