@@ -103,6 +103,8 @@ void stb350_destroy(void *hdl)
 
 int stb350_init(void *hdl)
 {
+	uint8_t reg;
+
 	assert(hdl);
 	assert (instance == hdl);
 
@@ -113,6 +115,11 @@ int stb350_init(void *hdl)
 	vTaskDelay(50 / portTICK_PERIOD_MS);
 	assert(gpio_set_level(instance->reset_n_gpio, 1) == 0);
 	vTaskDelay(50 / portTICK_PERIOD_MS);
+
+	/* setup mono mode */
+	assert(reg_read8(instance, DEVICE_CONFF, &reg) == 0);
+	reg |= 0x3;
+	assert(reg_write8(instance, DEVICE_CONFF, reg) == 0);
 
 	return 0;
 }
