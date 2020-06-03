@@ -7,6 +7,9 @@
 #include "esp_partition.h"
 #include "esp_log.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 static const char* TAG = "rv3.ota_update";
 
 #define FW_UPDATE_URL		"http://192.168.1.8/radio/radiov3.bin"
@@ -178,13 +181,37 @@ esp_ota_get_next_update_partition_error:
 	return ;
 }
 
-void ota_update()
+static void ota_update_task(void *arg)
 {
-	if (!is_new_firmware_available()) {
-		ESP_LOGI(TAG, "no fw update available");
-		return ;
-	}
+	lv_obj_t *mbox = arg;
 
-	ESP_LOGI(TAG, "start update");
-	ota_apply_update();
+	vTaskDelay(500 / portTICK_PERIOD_MS);
+	if (is_new_firmware_available()) {
+		ESP_LOGI(TAG, "start update");
+		lv_mbox_set_text(mbox, "Updating ...");
+		ota_apply_update();
+		lv_mbox_set_text(mbox, "Will reboot in 3 seconds ...");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		lv_mbox_set_text(mbox, "Will reboot in 2 seconds ...");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		lv_mbox_set_text(mbox, "Will reboot in 1 seconds ...");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		lv_mbox_set_text(mbox, "Will reboot in 0 seconds ...");
+		esp_restart();
+	}
+	lv_mbox_set_text(mbox, "Fw is up to date");
+	vTaskDelay(1000 / portTICK_PERIOD_MS);
+	lv_mbox_start_auto_close(mbox, 0);
+	vTaskDelete(NULL);
+}
+
+int ota_update_start(lv_obj_t *mbox)
+{
+	BaseType_t res;
+
+	res = xTaskCreatePinnedToCore(ota_update_task, "ota_update", 3 * 4096, mbox,
+			tskIDLE_PRIORITY + 1, NULL, tskNO_AFFINITY);
+	assert(res == pdPASS);
+
+	return 0;
 }

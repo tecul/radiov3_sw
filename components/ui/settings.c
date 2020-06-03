@@ -55,6 +55,34 @@ static void display_web_server_message()
 	lv_obj_set_event_cb(mbox, web_server_event_handler);
 }
 
+static void ota_update_event_handler(lv_obj_t * obj, lv_event_t event)
+{
+	if (event == LV_EVENT_DELETE && obj == mbox) {
+		lv_obj_del_async(lv_obj_get_parent(mbox));
+		mbox = NULL;
+	}
+}
+
+static void display_ota_update_message()
+{
+	lv_obj_t *obj;
+
+	lv_style_copy(&modal_style, &lv_style_plain_color);
+	modal_style.body.main_color = modal_style.body.grad_color = LV_COLOR_BLACK;
+	modal_style.body.opa = LV_OPA_50;
+
+	obj = lv_obj_create(lv_scr_act(), NULL);
+	lv_obj_set_style(obj, &modal_style);
+	lv_obj_set_pos(obj, 0, 0);
+	lv_obj_set_size(obj, LV_HOR_RES, LV_VER_RES);
+
+	mbox = lv_mbox_create(obj, NULL);
+	lv_obj_set_width(mbox, LV_HOR_RES - 40);
+	lv_mbox_set_text(mbox, "Checking update ...");
+	lv_obj_align(mbox, NULL, LV_ALIGN_CENTER, 0, 0);
+	lv_obj_set_event_cb(mbox, ota_update_event_handler);
+}
+
 const char *settings_labels[] = {"start web server", "database update", "fw update",
 	"wifi", "touch screen"};
 
@@ -77,7 +105,8 @@ static void settings_select_item(void *ctx, char *selected_label, int index)
 	case 2:
 		if (!wifi_is_connected())
 			break;
-		ota_update();
+		display_ota_update_message();
+		ota_update_start(mbox);
 		break;
 	case 1:
 		update_db("/sdcard/music.db", "/sdcard/Music");
