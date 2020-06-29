@@ -15,10 +15,11 @@ static const char* TAG = "rv3.web_server";
 
 static const struct mg_str s_get_method = MG_MK_STR("GET");
 static const struct mg_str s_post_method = MG_MK_STR("POST");
+static const struct mg_str s_put_method = MG_MK_STR("PUT");
 static const struct mg_str s_delete_method = MG_MK_STR("DELETE");
 static const char *sdcard_root = "/sdcard";
 
-typedef int (*cb_handle)(struct mg_connection *nc, char *path);
+typedef int (*cb_handle)(struct mg_connection *nc, struct http_message *hm, char *path);
 
 static struct web_server {
 	volatile bool is_active;
@@ -47,7 +48,7 @@ static char *concat(char *str1, char *str2)
 	return res;
 }
 
-static int display_dir(struct mg_connection *nc, char *dir)
+static int display_dir(struct mg_connection *nc, struct http_message *hm, char *dir)
 {
 	struct dirent *entry;
 	int is_first = 1;
@@ -91,20 +92,51 @@ static int display_dir(struct mg_connection *nc, char *dir)
 	return 0;
 }
 
-static int create_dir(struct mg_connection *nc, char *dir)
+static int create_dir(struct mg_connection *nc, struct http_message *hm, char *dir)
 {
 	return mkdir(dir, 0777);
 }
 
-static int delete_dir(struct mg_connection *nc, char *dir)
+static int delete_dir(struct mg_connection *nc, struct http_message *hm, char *dir)
 {
 	return rmdir(dir);
 }
 
-static int delete_file(struct mg_connection *nc, char *file)
+static int delete_file(struct mg_connection *nc, struct http_message *hm, char *file)
 {
 	return unlink(file);
 }
+
+static int rename_dir(struct mg_connection *nc, struct http_message *hm, char *dir)
+{
+	char new_name[256];
+	char *last_slash_pos;
+	char *dir_tmp;
+	char *new_path;
+	int res;
+
+	mg_get_http_var(&hm->body, "new_name", new_name, sizeof(new_name));
+
+	dir_tmp = strdup(dir);
+	if (!dir_tmp)
+		return -1;
+	last_slash_pos = rindex(dir_tmp, '/');
+	if (!last_slash_pos) {
+		free(dir_tmp);
+		return -1;
+	}
+	*last_slash_pos = '\0';
+	new_path = concat(dir_tmp, new_name);
+	free(dir_tmp);
+	if (!new_path)
+		return -1;
+
+	res = rename(dir, new_path);
+	free(new_path);
+
+	return res;
+}
+
 
 static void handle_cb(struct mg_connection *nc, struct http_message *hm,
 		      struct mg_str *cmd, cb_handle cb_handle, int is_send_ok)
@@ -124,7 +156,7 @@ static void handle_cb(struct mg_connection *nc, struct http_message *hm,
 		full_path[strlen(full_path) - 1] = '\0';
 
 	mg_url_decode(full_path, strlen(full_path) + 1, full_path, strlen(full_path) + 1, 0);
-	ret = cb_handle(nc, full_path);
+	ret = cb_handle(nc, hm, full_path);
 	if (ret)
 		goto internal_error;
 
@@ -164,6 +196,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 				handle_cb(nc, hm, &cmd, create_dir, 1);
 			else if (mg_strcmp(hm->method, s_delete_method) == 0)
 				handle_cb(nc, hm, &cmd, delete_dir, 1);
+			else if (mg_strcmp(hm->method, s_put_method) == 0)
+				handle_cb(nc, hm, &cmd, rename_dir, 1);
 			else
 				goto not_found;
 		} else if (mg_str_starts_with(hm->uri, file_api_prefix)) {

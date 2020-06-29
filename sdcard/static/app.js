@@ -1,8 +1,8 @@
 function getAsyncUrl(treeId, treeNode) {
 	if (treeNode)
-		return "api/v1/dir/music/" + treeNode['path']
+		return "api/v1/dir/" + treeNode['path']
 	else
-		return "api/v1/dir/music";
+		return "api/v1/dir/";
 }
 
 function filter(treeId, parentNode, responseData) {
@@ -11,6 +11,10 @@ function filter(treeId, parentNode, responseData) {
 	for (let i = 0; i < responseData.length; i++) {
 		var path = !parentNode ? responseData[i].name : parentNode.path + '/' + responseData[i].name;
 		var isParent = responseData[i]['type'] == "dir" ? true : false;
+
+		/* Start from music directory but remove others from root */
+		if (!parentNode && responseData[i].name != "music")
+			continue;
 
 		res.push({'name': responseData[i].name, 'path': path, isParent: isParent});
 	}
@@ -21,8 +25,17 @@ function filter(treeId, parentNode, responseData) {
 function delete_file(remote_path) {
 	console.log("delete file " + remote_path);
 	$.ajax({
-		url: "api/v1/file/music/" + remote_path,
+		url: "api/v1/file/" + remote_path,
 		type: 'DELETE',
+		async: false
+	});
+}
+
+function create_dir(remote_path) {
+	console.log("create dir " + remote_path);
+	$.ajax({
+		url: "api/v1/dir/" + remote_path,
+		type: 'POST',
 		async: false
 	});
 }
@@ -30,7 +43,7 @@ function delete_file(remote_path) {
 function delete_dir(remote_path) {
 	console.log("delete dir " + remote_path);
 	$.ajax({
-		url: "api/v1/dir/music/" + remote_path,
+		url: "api/v1/dir/" + remote_path,
 		type: 'DELETE',
 		async: false
 	});
@@ -38,7 +51,7 @@ function delete_dir(remote_path) {
 
 function recursive_delete(remote_path) {
 	$.ajax({
-		url: "api/v1/dir/music/" + remote_path,
+		url: "api/v1/dir/" + remote_path,
 		type: 'GET',
 		async: false,
 		dataType: "json",
@@ -61,6 +74,59 @@ function onRemoveNode(event, treeId, treeNode) {
 		delete_file(treeNode['path']);
 }
 
+function onRenameNode(e, treeId, treeNode, isCancel) {
+	let paths = treeNode.path.split('/');
+	let path = '';
+
+	$.ajax({
+		url: "api/v1/dir/" + treeNode['path'],
+		type: 'PUT',
+		data: { new_name: treeNode.name },
+		async: false
+	});
+
+	for (let i = 0; i < paths.length - 1; i++)
+		path = concat_path(path, paths[i]);
+	path = concat_path(path, treeNode.name);
+	treeNode.path = path;
+}
+
+function showRemoveBtn(treeId, treeNode) {
+	/* avoid to delete root dir */
+	return treeNode.level;
+}
+
+function showRenameBtn(treeId, treeNode) {
+	if (!treeNode.level)
+		return false;
+
+	return treeNode.isParent;
+}
+
+var newCount = 1;
+function addHoverDom(treeId, treeNode) {
+	if (!treeNode.isParent)
+		return ;
+	if (treeNode.editNameFlag || $("#addBtn_"+treeNode.tId).length>0)
+		return;
+	var sObj = $("#" + treeNode.tId + "_span");
+	var addStr = "<span class='button add' id='addBtn_" + treeNode.tId
+		+ "' title='add node' onfocus='this.blur();'></span>";
+	sObj.after(addStr);
+	var btn = $("#addBtn_"+treeNode.tId);
+	if (btn) btn.bind("click", function() {
+		var zTree = $.fn.zTree.getZTreeObj("treeDemo");
+		zTree.addNodes(treeNode, {id:(10000 + newCount), pId:treeNode.id, name: "new_dir" + newCount, isParent: true, path: treeNode.path + '/new_dir' + newCount});
+		create_dir(treeNode.path + '/new_dir' + newCount);
+		newCount++;
+		return false;
+	});
+};
+
+function removeHoverDom(treeId, treeNode) {
+	$("#addBtn_"+treeNode.tId).unbind().remove();
+};
+
 var setting = {
 	async: {
 		enable: true,
@@ -68,13 +134,19 @@ var setting = {
 		url: getAsyncUrl,
 		dataFilter: filter,
 	},
+	view: {
+		addHoverDom: addHoverDom,
+		removeHoverDom: removeHoverDom,
+		selectedMulti: false,
+	},
 	callback: {
 		onRemove: onRemoveNode,
+		onRename: onRenameNode
 	},
 	edit: {
 		enable:true,
-		showRenameBtn: false,
-		showRemoveBtn: true,
+		showRenameBtn: showRenameBtn,
+		showRemoveBtn: showRemoveBtn,
 		removeTitle: "remove",
 		drag: {
 			isMove: false,
@@ -86,7 +158,7 @@ var setting = {
 function create_dir(remote_path) {
 	console.log("create dir " + remote_path);
 	$.ajax({
-		url: "api/v1/dir/music/" + remote_path,
+		url: "api/v1/dir/" + remote_path,
 		type: 'POST',
 		async: false
 	});
@@ -114,7 +186,7 @@ function upload_file_for_real(path, file)
 	let data;
 	let request;
 
-	path = "/music/" + path;
+	path = "/" + path;
 	console.log("upload " + path);
 	data = new FormData();
 	data.append("content", file, path);
