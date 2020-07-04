@@ -19,6 +19,7 @@ enum music_player_button {
 	MUSIC_PLAYER_BACK,
 	MUSIC_PLAYER_UP,
 	MUSIC_PLAYER_DOWN,
+	MUSIC_PLAYER_NEXT,
 	MUSIC_PLAYER_NB
 };
 
@@ -26,6 +27,7 @@ enum music_player_state {
 	STATE_INIT,
 	STATE_WAIT_SONG_START,
 	STATE_SONG_RUNNING,
+	STATE_SONG_NEXT,
 	STATE_PLAYLIST_DONE
 };
 
@@ -113,6 +115,9 @@ static void music_player_event_cb(lv_obj_t *btn, lv_event_t event)
 		lv_bar_set_value(player->sound_level,  audio_sound_level_down(),
 				 LV_ANIM_ON);
 		break;
+	case MUSIC_PLAYER_NEXT:
+		player->state = STATE_SONG_NEXT;
+		break;
 	default:
 		assert(0);
 	}
@@ -153,6 +158,10 @@ static void update_state(struct music_player *player)
 	case STATE_PLAYLIST_DONE:
 		handle_back_event(player);
 		break;
+	case STATE_SONG_NEXT:
+		audio_music_stop();
+		start_next_song(player);
+		break;
 	default:
 		assert(0);
 	}
@@ -179,13 +188,13 @@ static void setup_new_screen(struct music_player *player)
 static void music_player_screen(struct music_player *player)
 {
 	const int sizes[MUSIC_PLAYER_NB][2] = {
-		{60, 55}, {60, 55}, {60, 55}, {60, 55}
+		{60, 55}, {60, 55}, {60, 55}, {60, 55}, {60, 55}
 	};
 	const lv_point_t pos[MUSIC_PLAYER_NB] = {
-		{20, 24}, {20, 168}, {240, 24}, {240, 168}
+		{20, 24}, {20, 168}, {240, 24}, {240, 168}, {20, 120 - 27}
 	};
 	const char *labels[MUSIC_PLAYER_NB] = {
-		"MENU", "BACK", "UP", "DOWN"
+		"MENU", "BACK", "UP", "DOWN", "NEXT"
 	};
 	int i;
 
