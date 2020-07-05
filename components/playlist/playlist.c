@@ -22,6 +22,19 @@ struct playlist {
 	int song_idx;
 };
 
+static struct playlist_song *get_tail_item(struct playlist *playlist)
+{
+	struct playlist_song *tail = playlist->root;
+
+	if (!tail)
+		return NULL;
+
+	while (tail->next)
+		tail = tail->next;
+
+	return tail;
+}
+
 void *playlist_create(void *db_hdl)
 {
 	struct playlist *playlist;
@@ -60,17 +73,20 @@ int playlist_add_song(void *hdl, char *artist, char *album, char *title)
 {
 	struct playlist *playlist = hdl;
 	struct playlist_song *new;
+	struct playlist_song *tail = get_tail_item(playlist);
 
 	new = malloc(sizeof(*new));
 	if (!new)
 		return -1;
 
-	new->next = playlist->root;
+	if (tail)
+		tail->next = new;
+	else
+		playlist->root = new;
+	new->next = NULL;
 	new->artist = strdup(artist);
 	new->album = strdup(album);
 	new->title = strdup(title);
-
-	playlist->root = new;
 
 	ESP_LOGI(TAG , " add playlist item %p/%p | %s/%s/%s", playlist, new, artist, album, title);
 	playlist->song_nb++;
