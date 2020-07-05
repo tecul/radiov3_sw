@@ -10,6 +10,10 @@
 #include "sdcard.h"
 #include "esp_sntp.h"
 
+#define container_of(ptr, type, member) ({ \
+	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+	(type *)( (char *)__mptr - offsetof(type,member) );})
+
 static ui_hdl instance;
 
 struct system_menu {
@@ -17,13 +21,18 @@ struct system_menu {
 	lv_obj_t *wifi_label;
 	lv_obj_t *sd_card_label;
 	lv_obj_t *bluetooth_label;
-	lv_obj_t *date;
 	lv_obj_t *time;
+	lv_obj_t *user;
 	lv_task_t *task_level;
 	bool is_sntp_done;
 };
 
 static void destroy_chained(struct ui_cbs *cbs)
+{
+	;/* nothing to done */
+}
+
+static void restore_event(struct ui_cbs *cbs)
 {
 	;/* nothing to done */
 }
@@ -63,9 +72,9 @@ static void task_level_cb(struct _lv_task_t *task)
 	localtime_r(&now, &timeinfo);
 	snprintf(buf, sizeof(buf), "%2d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
 	lv_label_set_text(system->time, buf);
-	snprintf(buf, sizeof(buf), "%02d/%02d/%04d", timeinfo.tm_mday,
+	/*snprintf(buf, sizeof(buf), "%02d/%02d/%04d", timeinfo.tm_mday,
 		 timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
-	lv_label_set_text(system->date, buf);
+	lv_label_set_text(system->date, buf);*/
 }
 
 ui_hdl system_menu_create()
@@ -86,12 +95,12 @@ ui_hdl system_menu_create()
 
 	system->time = lv_label_create(lv_layer_top(), NULL);
 	assert(system->time);
-	lv_obj_align_origo(system->time, lv_layer_top(), LV_ALIGN_IN_TOP_MID, 0, 10);
+	lv_obj_align(system->time, lv_layer_top(), LV_ALIGN_IN_TOP_LEFT, 2, 0);
 	lv_label_set_text(system->time, "");
-	system->date = lv_label_create(lv_layer_top(), NULL);
-	assert(system->date);
-	lv_obj_align(system->date, lv_layer_top(), LV_ALIGN_IN_TOP_LEFT, 1, 0);
-	lv_label_set_text(system->date, "");
+	system->user = lv_label_create(lv_layer_top(), NULL);
+	assert(system->user);
+	lv_obj_align_origo(system->user, lv_layer_top(), LV_ALIGN_IN_TOP_MID, 0, 10);
+	lv_label_set_text(system->user, "");
 
 	/* Set time zone to Paris. Got it from :
 	 * # tail -1 /usr/share/zoneinfo/Europe/Paris
@@ -102,7 +111,18 @@ ui_hdl system_menu_create()
 	assert(system->task_level);
 
 	system->cbs.destroy_chained = destroy_chained;
+	system->cbs.restore_event = restore_event;
 	instance = &system->cbs;
 
 	return instance;
+}
+
+void system_menu_set_user_label(const char *text)
+{
+	struct system_menu *system = container_of(instance, struct system_menu, cbs);
+
+	if (!instance)
+		return ;
+
+	lv_label_set_text(system->user, text);
 }

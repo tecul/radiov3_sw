@@ -6,6 +6,8 @@
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
 
+#include "system_menu.h"
+
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
 	(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -48,6 +50,15 @@ static inline struct paging_menu *get_paging_menu(lv_obj_t *btn)
 	return container_of(cbs, struct paging_menu, cbs);
 }
 
+static void set_system_info(struct paging_menu *menu)
+{
+	int page_nb_max = (menu->item_nb - 1) / 3;
+	char system_page_info[16];
+
+	snprintf(system_page_info, sizeof(system_page_info), "%2d / %2d", menu->page_nb + 1, page_nb_max + 1);
+	system_menu_set_user_label(system_page_info);
+}
+
 static void paging_menu_destroy(struct paging_menu *menu)
 {
 	if (menu->client_cbs->destroy)
@@ -58,7 +69,12 @@ static void paging_menu_destroy(struct paging_menu *menu)
 
 static void handle_back_event(struct paging_menu *menu)
 {
+	ui_hdl prev = lv_obj_get_user_data(menu->prev_scr);
+
 	lv_disp_load_scr(menu->prev_scr);
+	if (prev->restore_event)
+		prev->restore_event(prev);
+
 	paging_menu_destroy(menu);
 }
 
@@ -68,7 +84,10 @@ static void destroy_chained(struct ui_cbs *cbs)
 	ui_hdl prev;
 
 	if (menu->client_cbs->is_root && menu->client_cbs->is_root(menu->ctx)) {
+		ui_hdl top = lv_obj_get_user_data(menu->scr);
 		lv_disp_load_scr(menu->scr);
+		if (top->restore_event)
+			top->restore_event(top);
 		return ;
 	}
 
@@ -76,6 +95,13 @@ static void destroy_chained(struct ui_cbs *cbs)
 	prev->destroy_chained(prev);
 
 	paging_menu_destroy(menu);
+}
+
+static void restore_event(struct ui_cbs *cbs)
+{
+	struct paging_menu *menu = container_of(cbs, struct paging_menu, cbs);
+
+	set_system_info(menu);
 }
 
 static enum menu_button get_btn_id_from_obj(struct paging_menu *menu, lv_obj_t *btn)
@@ -99,6 +125,7 @@ static void paging_menu_setup_page(struct paging_menu *menu, int page_nb)
 	int i;
 
 	menu->page_nb = page_nb;
+	set_system_info(menu);
 	lv_obj_set_hidden(menu->btn[MENU_UP], page_nb == 0);
 	lv_obj_set_hidden(menu->btn[MENU_DOWN], page_nb == menu->page_count - 1);
 
@@ -255,6 +282,7 @@ ui_hdl paging_menu_create(int item_nb, struct paging_cbs *cbs, void *ctx)
 
 	menu->prev_scr = lv_disp_get_scr_act(NULL);
 	menu->cbs.destroy_chained = destroy_chained;
+	menu->cbs.restore_event = restore_event;
 	setup_paging_menu(menu);
 
 	return &menu->cbs;

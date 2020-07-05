@@ -8,6 +8,8 @@
 #include "audio.h"
 #include "playlist.h"
 
+#include "system_menu.h"
+
 static const char* TAG = "rv3.music_player";
 
 #define container_of(ptr, type, member) ({ \
@@ -63,7 +65,12 @@ static void music_player_destroy(struct music_player *player)
 
 static void handle_back_event(struct music_player *player)
 {
+	ui_hdl prev = lv_obj_get_user_data(player->prev_scr);
+
 	lv_disp_load_scr(player->prev_scr);
+	if (prev->restore_event)
+		prev->restore_event(prev);
+
 	music_player_destroy(player);
 }
 
@@ -258,6 +265,7 @@ ui_hdl music_player_create(void *playlist_hdl)
 	player->prev_scr = lv_disp_get_scr_act(NULL);
 	player->cbs.destroy_chained = destroy_chained;
 	music_player_screen(player);
+	system_menu_set_user_label("");
 
 	return &player->cbs;
 }

@@ -9,6 +9,8 @@
 #include "esp_wifi.h"
 #include "esp_log.h"
 
+#include "system_menu.h"
+
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
 	(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -48,7 +50,12 @@ static inline struct wifi_setting_menu *get_wifi_setting()
 
 static void wifi_leave(struct wifi_setting_menu *wifi)
 {
+	ui_hdl prev = lv_obj_get_user_data(wifi->prev_scr);
+
 	lv_disp_load_scr(wifi->prev_scr);
+	if (prev->restore_event)
+		prev->restore_event(prev);
+
 	lv_obj_del(wifi->scr);
 	if (wifi->ssid)
 		free(wifi->ssid);
@@ -269,6 +276,7 @@ ui_hdl wifi_setting_create()
 	wifi->prev_scr = lv_disp_get_scr_act(NULL);
 	wifi->cbs.destroy_chained = NULL;
 	setup_welcome_screen(wifi);
+	system_menu_set_user_label("");
 
 	return &wifi->cbs;
 }

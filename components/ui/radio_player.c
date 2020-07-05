@@ -7,6 +7,8 @@
 
 #include "audio.h"
 
+#include "system_menu.h"
+
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
 	(type *)( (char *)__mptr - offsetof(type,member) );})
@@ -48,7 +50,12 @@ static void radio_player_destroy(struct radio_player *player)
 
 static void handle_back_event(struct radio_player *player)
 {
+	ui_hdl prev = lv_obj_get_user_data(player->prev_scr);
+
 	lv_disp_load_scr(player->prev_scr);
+	if (prev->restore_event)
+		prev->restore_event(prev);
+
 	radio_player_destroy(player);
 }
 
@@ -196,6 +203,7 @@ ui_hdl radio_player_create(const char *radio_label, const char *url,
 	player->prev_scr = lv_disp_get_scr_act(NULL);
 	player->cbs.destroy_chained = destroy_chained;
 	radio_player_screen(player, radio_label, url, port_nb, path);
+	system_menu_set_user_label("");
 
 	return &player->cbs;
 }

@@ -11,6 +11,9 @@
 #include "nvs_flash.h"
 #include "esp_log.h"
 
+#include "ui.h"
+#include "system_menu.h"
+
 static const char* TAG = "rv3.calibration";
 
 #define TOUCH_NUMBER		3
@@ -209,6 +212,7 @@ static void compute_calib(int y1, int x1, int y2, int x2, float *a, float *b)
 
 static void handle_state_wait_leave(struct calib *calib)
 {
+	ui_hdl prev = lv_obj_get_user_data(calib->prev_scr);
 	lv_indev_t *indev;
 	/* compute calibration data */
 	compute_calib(CIRCLE_OFFSET + CIRCLE_SIZE / 2 ,calib->point[0].x,
@@ -227,6 +231,8 @@ static void handle_state_wait_leave(struct calib *calib)
 
 	/* restore previous screen */
 	lv_disp_load_scr(calib->prev_scr);
+	if (prev->restore_event)
+		prev->restore_event(prev);
 	/* delete calibration screen and associate datas*/
 	lv_obj_del(calib->scr);
 	free(calib);
@@ -307,6 +313,7 @@ static void calibration_start_internal()
 	assert(calib->scr);
 	lv_obj_set_user_data(calib->scr, calib);
 	lv_disp_load_scr(calib->scr);
+	system_menu_set_user_label("");
 	calib->hres = lv_disp_get_hor_res(NULL);
 	calib->vres = lv_disp_get_ver_res(NULL);
 	lv_obj_set_size(calib->scr, calib->hres, calib->vres);
