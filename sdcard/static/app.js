@@ -13,7 +13,7 @@ function filter(treeId, parentNode, responseData) {
 		var isParent = responseData[i]['type'] == "dir" ? true : false;
 
 		/* Start from music directory but remove others from root */
-		if (!parentNode && responseData[i].name != "music")
+		if (!parentNode && responseData[i].name != "music" && responseData[i].name != "Music")
 			continue;
 
 		res.push({'name': responseData[i].name, 'path': path, isParent: isParent});
