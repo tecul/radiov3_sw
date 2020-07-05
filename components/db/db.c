@@ -23,6 +23,17 @@ struct db_info {
 	struct id3_meta meta;
 };
 
+struct song_cache {
+	struct db_info info;
+};
+
+struct album_cache {
+	char *dirname;
+	int song_nb;
+	/* array of album songs cache info ordered by track_nb */
+	struct song_cache *songs;
+};
+
 struct db_builder {
 	char *dirname;
 	char *root_dir;
@@ -30,6 +41,7 @@ struct db_builder {
 
 struct db {
 	char *dirname;
+	struct album_cache cache;
 };
 
 struct track_nb_song_name {
@@ -175,6 +187,114 @@ static int read_db_info(void *hdl, char *artist, char *album, char *song, struct
 	free(filename);
 
 	return ret;
+}
+
+static void invalidate_cache(void *hdl, struct album_cache *cache)
+{
+	int i;
+
+	for (i = 0; i < cache->song_nb; i++) {
+		db_put_meta(hdl, &cache->songs[i].info.meta);
+		free(cache->songs[i].info.filepath);
+	}
+	free(cache->songs);
+	cache->songs = NULL;
+	cache->song_nb = 0;
+	free(cache->dirname);
+	cache->dirname = NULL;
+}
+
+static int sort_songs_array(const void *pa, const void *pb)
+{
+	const struct song_cache *a = pa;
+	const struct song_cache *b = pb;
+
+	if (a->info.meta.track_nb < b->info.meta.track_nb)
+		return -1;
+	if (a->info.meta.track_nb > b->info.meta.track_nb)
+		return 1;
+
+	return 0;
+}
+
+static struct album_cache *refill_cache(void *hdl, char *dirname)
+{
+	struct db *db = hdl;
+	struct album_cache *cache = &db->cache;
+	int count = 0;
+	int idx = 0;
+	struct dirent *entry;
+	DIR *d;
+	int res;
+
+	ESP_LOGI(TAG, "refill cache for %s", dirname);
+	d = opendir(dirname);
+	if (!d)
+		return NULL;
+
+	/* count entry number */
+	entry = readdir(d);
+	while (entry) {
+		if (entry->d_type == DT_REG)
+			count++;
+		entry = readdir(d);
+	}
+	if (count == 0) {
+		closedir(d);
+		return NULL;
+	}
+
+	cache->songs = malloc(count * sizeof(struct song_cache));
+	if (cache->songs == NULL) {
+		closedir(d);
+		return NULL;
+	}
+
+	ESP_LOGI(TAG, "cache song entries is %d", count);
+
+	/* fillup info */
+	rewinddir(d);
+	entry = readdir(d);
+	while (entry) {
+		char *filename;
+		if (entry->d_type != DT_REG)
+			goto skip_entry;
+		filename = concat(dirname, entry->d_name);
+		assert(filename);
+		ESP_LOGI(TAG, "Fill cache entry %d %s", idx, filename);
+		res = read_db_info_by_filename(filename, &cache->songs[idx++].info);
+		assert(res == 0);
+		free(filename);
+skip_entry:
+		entry = readdir(d);
+	}
+	closedir(d);
+
+	/* order songs by track_nb */
+	qsort(cache->songs, count, sizeof(struct song_cache),
+	      sort_songs_array);
+
+	cache->song_nb = count;
+	cache->dirname = strdup(dirname);
+
+	return cache;
+}
+
+static struct album_cache *get_album_cache(void *hdl, char *dirname)
+{
+	struct db *db = hdl;
+	struct album_cache *cache = &db->cache;
+
+	if (cache->dirname && strcmp(dirname, cache->dirname) == 0) {
+		return cache;
+	}
+
+	if (cache->dirname)
+		invalidate_cache(hdl, cache);
+
+	cache = refill_cache(hdl, dirname);
+
+	return cache;
 }
 
 static int walk_dir(char *root, walk_dir_entry_cb cb, void *arg)
@@ -519,37 +639,22 @@ static int count_directories(char *root)
 	return count;
 }
 
-static int count_files(char *root)
+static int count_files(void *hdl, char *root)
 {
-	struct dirent *entry;
-	DIR *d;
-	int count = 0;
+	struct album_cache *cache;
+	int count;
 
 	if (root == NULL)
 		return -1;
 
 	ESP_LOGI(TAG, "Count %s", root);
-	d = opendir(root);
-	if (!d) {
+	cache = get_album_cache(hdl, root);
+	if (!cache) {
 		ESP_LOGW(TAG, "unable to open directory %s", root);
 		return -2;
 	}
+	count = cache->song_nb;
 
-	entry = readdir(d);
-	while (entry) {
-		switch (entry->d_type) {
-		case DT_REG:
-			count++;
-			break;
-		case DT_DIR:
-			break;
-		default:
-			ESP_LOGW(TAG, "unsupported dt_type %d", entry->d_type);
-		}
-		entry = readdir(d);
-	}
-
-	closedir(d);
 	ESP_LOGI(TAG, "Count of %s done => %d", root, count);
 
 	return count;
@@ -601,81 +706,17 @@ exit_loop:
 	return res;
 }
 
-static int sort_track_nb_array(const void *pa, const void *pb)
+static char *file_name(void *hdl, int index, char *root)
 {
-	const struct track_nb_song_name *a = pa;
-	const struct track_nb_song_name *b = pb;
-
-	if (a->track_nb < b->track_nb)
-		return -1;
-	if (a->track_nb > b->track_nb)
-		return 1;
-
-	return 0;
-}
-
-static int get_track_nb(void *hdl, char *artist, char *album, char *song)
-{
-	struct db_info db_info;
-	int ret;
-
-	ret = read_db_info(hdl, artist, album, song, &db_info);
-	if (ret)
-		return 9999;
-	db_put_meta(hdl, &db_info.meta);
-
-	return db_info.meta.track_nb;
-}
-
-static char *file_name(void *hdl, char *artist, char *album, int index, char *root)
-{
-	struct dirent *entry;
-	DIR *d;
-	int count = 0;
+	struct album_cache *cache;
 	char *res = NULL;
-	struct track_nb_song_name *track_nb_array;
-	int idx = 0;
-	int i;
-
-	if (root == NULL)
-		return NULL;
 
 	ESP_LOGI(TAG, "Get %s at index %d", root, index);
 
-	/* count entries */
-	count = count_files(root);
-	if (count <= 0 || index >= count)
-		return NULL;
+	cache = get_album_cache(hdl, root);
+	assert(cache);
 
-
-	d = opendir(root);
-	if (!d) {
-		ESP_LOGW(TAG, "unable to open directory %s", root);
-		return NULL;
-	}
-	track_nb_array = malloc(count * sizeof(struct track_nb_song_name));
-	assert(track_nb_array);
-	/* fill-in track_nb_array */
-	entry = readdir(d);
-	while (entry) {
-		if (entry->d_type != DT_REG)
-			continue;
-		track_nb_array[idx].track_nb = get_track_nb(hdl, artist, album, entry->d_name);
-		track_nb_array[idx].song_name = strdup(entry->d_name);
-		idx++;
-		entry = readdir(d);
-	}
-	closedir(d);
-
-	/* sort it by track_nb */
-	qsort(track_nb_array, count, sizeof(struct track_nb_song_name),
-	      sort_track_nb_array);
-
-	res = strdup(track_nb_array[index].song_name);
-
-	for (i = 0; i < count; i++)
-		free(track_nb_array[i].song_name);
-	free(track_nb_array);
+	res = strdup(cache->songs[index].info.meta.title);
 
 	ESP_LOGI(TAG, "get of %s done => %s", root, res);
 
@@ -689,6 +730,7 @@ void *db_open(char *dirname)
 	db = malloc(sizeof(*db));
 	if (!db)
 		return NULL;
+	memset(db, 0, sizeof(struct db));
 
 	db->dirname = dirname;
 
@@ -758,7 +800,7 @@ int db_song_get_nb(void *hdl, char *artist, char *album)
 	dirname = concat3(db->dirname, artist, album);
 	if (!dirname)
 		return 0;
-	ret = count_files(dirname);
+	ret = count_files(hdl, dirname);
 	free(dirname);
 
 	return ret;
@@ -773,7 +815,7 @@ char *db_song_get(void *hdl, char *artist, char *album, int index)
 	dirname = concat3(db->dirname, artist, album);
 	if (!dirname)
 		return NULL;
-	res = file_name(hdl, artist, album, index, dirname);
+	res = file_name(hdl, index, dirname);
 	free(dirname);
 
 	return res;
