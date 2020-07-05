@@ -36,9 +36,15 @@ struct paging_menu {
 	void *ctx;
 };
 
-static inline struct paging_menu *get_paging_menu()
+static inline struct paging_menu *get_paging_menu(lv_obj_t *btn)
 {
 	struct ui_cbs *cbs = lv_obj_get_user_data(lv_disp_get_scr_act(NULL));
+	struct ui_cbs *cbs_btn = lv_obj_get_user_data(btn);
+
+	/* test if screen has changed while we still got button events */
+	if (cbs_btn != cbs)
+		return NULL;
+
 	return container_of(cbs, struct paging_menu, cbs);
 }
 
@@ -162,11 +168,16 @@ static void paging_menu_event_clicked_cb(struct paging_menu *menu, enum menu_but
 
 static void paging_menu_event_cb(lv_obj_t *btn, lv_event_t event)
 {
-	struct paging_menu *menu = get_paging_menu();
-	enum menu_button btn_id = get_btn_id_from_obj(menu, btn);
+	struct paging_menu *menu;
+	enum menu_button btn_id;
 
 	if (event != LV_EVENT_CLICKED && event !=LV_EVENT_LONG_PRESSED)
 		return;
+
+	menu = get_paging_menu(btn);
+	if (!menu)
+		return ;
+	btn_id = get_btn_id_from_obj(menu, btn);
 
 	if (event == LV_EVENT_LONG_PRESSED)
 		paging_menu_event_long_pressed_cb(menu, btn_id);
@@ -202,6 +213,7 @@ static void setup_paging_menu(struct paging_menu *menu)
 	for (i = 0; i < MENU_BTN_NB; i++) {
 		menu->btn[i] = lv_btn_create(menu->scr, NULL);
 		assert(menu->btn[i]);
+		lv_obj_set_user_data(menu->btn[i], &menu->cbs);
 		lv_obj_set_size(menu->btn[i], sizes[i][0], sizes[i][1]);
 		lv_obj_set_pos(menu->btn[i], pos[i].x, pos[i].y);
 		lv_obj_set_hidden(menu->btn[i], true);
