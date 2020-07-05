@@ -18,6 +18,8 @@ struct playlist {
 	void *db_hdl;
 	struct playlist_song *root;
 	struct playlist_song *current;
+	int song_nb;
+	int song_idx;
 };
 
 void *playlist_create(void *db_hdl)
@@ -71,6 +73,7 @@ int playlist_add_song(void *hdl, char *artist, char *album, char *title)
 	playlist->root = new;
 
 	ESP_LOGI(TAG , " add playlist item %p/%p | %s/%s/%s", playlist, new, artist, album, title);
+	playlist->song_nb++;
 
 	return 0;
 }
@@ -80,6 +83,7 @@ int playlist_rewind(void *hdl)
 	struct playlist *playlist = hdl;
 
 	playlist->current = NULL;
+	playlist->song_idx = 0;
 
 	return 0;
 }
@@ -110,6 +114,7 @@ int playlist_next(void *hdl, struct playlist_item *item)
 	}
 
 	ESP_LOGI(TAG , " queue playlist item %p/%p | %s/%s/%s | %s", playlist, playlist->current, item->meta.artist, item->meta.album, item->meta.title, item->filepath);
+	playlist->song_idx++;
 
 	return 0;
 }
@@ -127,4 +132,18 @@ void playlist_put_item(void *hdl, struct playlist_item *item)
 
 	db_put_item(playlist->db_hdl, item->filepath);
 	db_put_meta(playlist->db_hdl, &item->meta);
+}
+
+int playlist_song_nb(void *hdl)
+{
+	struct playlist *playlist = hdl;
+
+	return playlist->song_nb;
+}
+
+int playlist_song_idx(void *hdl)
+{
+	struct playlist *playlist = hdl;
+
+	return playlist->song_idx;
 }

@@ -1,5 +1,6 @@
 #include "music_player.h"
 
+#include <stdio.h>
 #include <assert.h>
 
 #include "lvgl/lvgl.h"
@@ -52,6 +53,16 @@ static inline struct music_player *get_music_player()
 {
 	struct ui_cbs *cbs = lv_obj_get_user_data(lv_disp_get_scr_act(NULL));
 	return container_of(cbs, struct music_player, cbs);
+}
+
+static void set_system_info(struct music_player *player)
+{
+	int song_nb = playlist_song_nb(player->playlist_hdl);
+	int song_idx = playlist_song_idx(player->playlist_hdl);
+	char system_page_info[16];
+
+	snprintf(system_page_info, sizeof(system_page_info), "%2d / %2d", song_idx, song_nb);
+	system_menu_set_user_label(system_page_info);
 }
 
 static void music_player_destroy(struct music_player *player)
@@ -178,6 +189,7 @@ static void task_level_cb(struct _lv_task_t *task)
 {
 	struct music_player *player = get_music_player();
 
+	set_system_info(player);
 	update_state(player);
 	lv_bar_set_value(player->bar_level, audio_buffer_level(), LV_ANIM_ON);
 }

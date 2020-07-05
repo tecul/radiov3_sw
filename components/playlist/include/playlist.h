@@ -15,5 +15,7 @@ int playlist_rewind(void *hdl);
 int playlist_next(void *hdl, struct playlist_item *item);
 int playlist_prev(void *hdl, struct playlist_item *item);
 void playlist_put_item(void *hdl, struct playlist_item *item);
+int playlist_song_nb(void *hdl);
+int playlist_song_idx(void *hdl);
 
 #endif
