@@ -48,6 +48,53 @@ static char *concat(char *str1, char *str2)
 	return res;
 }
 
+static int get_file(struct mg_connection *nc, struct http_message *hm, char *file)
+{
+	char buffer[128];
+	int len;
+	int fd;
+
+	fd = open(file, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\n"
+		  "Content-Type: application/text; charset=utf-8"
+		  "\r\nTransfer-Encoding: chunked\r\n\r\n");
+
+	while (1) {
+		len = read(fd, buffer, sizeof(buffer));
+		if (len <= 0)
+			break;
+		mg_send_http_chunk(nc, buffer, len);
+	}
+
+	mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
+	close(fd);
+
+	return 0;
+}
+
+static int create_write_file(struct mg_connection *nc, struct http_message *hm, char *file)
+{
+	int len;
+	int fd;
+
+	fd = creat(file, 0666);
+	if (fd < 0)
+		return -1;
+
+	len = write(fd, hm->body.p, hm->body.len);
+	if (len != hm->body.len) {
+		close(fd);
+		return -1;
+	}
+
+	close(fd);
+
+	return 0;
+}
+
 static int display_dir(struct mg_connection *nc, struct http_message *hm, char *dir)
 {
 	struct dirent *entry;
@@ -107,7 +154,7 @@ static int delete_file(struct mg_connection *nc, struct http_message *hm, char *
 	return unlink(file);
 }
 
-static int rename_dir(struct mg_connection *nc, struct http_message *hm, char *dir)
+static int rename_dir_file(struct mg_connection *nc, struct http_message *hm, char *dir)
 {
 	char new_name[256];
 	char *last_slash_pos;
@@ -197,14 +244,20 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 			else if (mg_strcmp(hm->method, s_delete_method) == 0)
 				handle_cb(nc, hm, &cmd, delete_dir, 1);
 			else if (mg_strcmp(hm->method, s_put_method) == 0)
-				handle_cb(nc, hm, &cmd, rename_dir, 1);
+				handle_cb(nc, hm, &cmd, rename_dir_file, 1);
 			else
 				goto not_found;
 		} else if (mg_str_starts_with(hm->uri, file_api_prefix)) {
 			cmd.p = hm->uri.p + file_api_prefix.len;
 			cmd.len = hm->uri.len - file_api_prefix.len;
-			if (mg_strcmp(hm->method, s_delete_method) == 0)
+			if (mg_strcmp(hm->method, s_get_method) == 0)
+				handle_cb(nc, hm, &cmd, get_file, 0);
+			else if (mg_strcmp(hm->method, s_post_method) == 0)
+				handle_cb(nc, hm, &cmd, create_write_file, 1);
+			else if (mg_strcmp(hm->method, s_delete_method) == 0)
 				handle_cb(nc, hm, &cmd, delete_file, 1);
+			else if (mg_strcmp(hm->method, s_put_method) == 0)
+				handle_cb(nc, hm, &cmd, rename_dir_file, 1);
 			else
 				goto not_found;
 		} else

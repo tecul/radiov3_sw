@@ -1,0 +1,5 @@
+
+li:nth-child(even).playlist_elem {background-color: yellow;}
+li:nth-child(odd).playlist_elem {background-color: Tomato;}
+li.playlist_elem {border: 1px solid black; padding: 2px; margin: 1px; text-align: center; border-radius: 4px;}
+.foobar {float: right;}

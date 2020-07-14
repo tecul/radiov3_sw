@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<HTML>
+ <HEAD>
+  <TITLE> Playlist manager </TITLE>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" href="demoStyle/demo.css" type="text/css">
+  <link rel="stylesheet" href="zTreeStyle/zTreeStyle.css" type="text/css">
+  <style type="text/css">
+div#rMenu {position:absolute; visibility:hidden; top:0; background-color: #555;text-align: left;padding: 2px;}
+div#rMenu ul li{
+  margin: 1px 0;
+  padding: 0 5px;
+  cursor: pointer;
+  list-style: none outside none;
+  background-color: #DFDFDF;
+}
+  </style>
+  <script type="text/javascript" src="jquery-3.5.1.min.js"></script>
+  <script type="text/javascript" src="jquery-ui-1.12.1/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="jquery.ztree.core.js"></script>
+  <script type="text/javascript" src="jquery.ztree.exedit.js"></script>
+  <link rel="stylesheet" href="playlist.css" type="text/css">
+  <script type="text/javascript" src="playlist.js"></script>
+ </HEAD>
+<BODY>
+  <ul id="musicpane" class="ztree" style="float: left;"></ul>
+  <ul id="playlist" class="ztree" style="float: left;">
+    <button id="save" disabled>save</button>
+    <button id="cancel" disabled>cancel</button>
+  </ul>
+  <ul id="playlistpane" class="ztree"></ul>
+  <div id="rMenu">
+    <ul>
+      <li id="m_add_dir" onclick="add_dir_menu();" >Add Directory</li>
+      <li id="m_del_dir" onclick="del_dir_menu();">Delete Directory</li>
+      <li id="m_rename_dir" onclick="rename_dir_menu();">Rename Directory</li>
+      <li id="m_add_playlist" onclick="add_playlist_menu();">Add Playlist</li>
+      <li id="m_del_playlist" onclick="del_playlist_menu();">Remove Playlist</li>
+      <li id="m_edit_playlist" onclick="edit_playlist_menu();">Edit Playlist</li>
+      <li id="m_rename_playlist" onclick="rename_playlist_menu();">Rename Playlist</li>
+    </ul>
+  </div>
+</BODY>
+</HTML>
