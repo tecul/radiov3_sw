@@ -9,6 +9,7 @@
 #include "radio_menu.h"
 #include "system_menu.h"
 #include "artist_menu.h"
+#include "playlist_menu.h"
 
 #include "paging_menu.h"
 
@@ -16,7 +17,7 @@
 
 static const char* TAG = "rv3.main";
 
-const char *main_labels[] = {"radio", "music", "settings"};
+const char *main_labels[] = {"radio", "music", "playlist", "settings"};
 
 static char *main_get_item_label(void *ctx, int index)
 {
@@ -35,6 +36,9 @@ static void main_select_item(void *ctx, char *selected_label, int index)
 		artist_menu_create();
 		break;
 	case 2:
+		playlist_menu_create("/sdcard/playlist");
+		break;
+	case 3:
 		settings_create();
 		break;
 	default:
