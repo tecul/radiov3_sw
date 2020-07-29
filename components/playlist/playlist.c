@@ -1,6 +1,7 @@
 #include "playlist.h"
 
 #include <string.h>
+#include <stdio.h>
 
 #include "db.h"
 #include "esp_log.h"
@@ -16,11 +17,89 @@ struct playlist_song {
 
 struct playlist {
 	void *db_hdl;
+	int is_db_close_on_exit;
 	struct playlist_song *root;
 	struct playlist_song *current;
 	int song_nb;
 	int song_idx;
 };
+
+/* taken from https://raw.githubusercontent.com/ivanrad/getline/master/getline.c */
+/* getline.c
+ *
+ * getdelim(), getline() - read a delimited record from stream, ersatz implementation
+ *
+ * For more details, see: http://pubs.opengroup.org/onlinepubs/9699919799/functions/getline.html
+ *
+ */
+
+//#include "getline.h"
+#define SSIZE_MAX	4096
+#include <stdlib.h>
+#include <errno.h>
+#include <limits.h>
+
+ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *stream) {
+    char *cur_pos, *new_lineptr;
+    size_t new_lineptr_len;
+    int c;
+
+    if (lineptr == NULL || n == NULL || stream == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (*lineptr == NULL) {
+        *n = 128; /* init len */
+        if ((*lineptr = (char *)malloc(*n)) == NULL) {
+            errno = ENOMEM;
+            return -1;
+        }
+    }
+
+    cur_pos = *lineptr;
+    for (;;) {
+        c = getc(stream);
+
+        if (ferror(stream) || (c == EOF && cur_pos == *lineptr))
+            return -1;
+
+        if (c == EOF)
+            break;
+
+        if ((*lineptr + *n - cur_pos) < 2) {
+            if (SSIZE_MAX / 2 < *n) {
+#ifdef EOVERFLOW
+                errno = EOVERFLOW;
+#else
+                errno = ERANGE; /* no EOVERFLOW defined */
+#endif
+                return -1;
+            }
+            new_lineptr_len = *n * 2;
+
+            if ((new_lineptr = (char *)realloc(*lineptr, new_lineptr_len)) == NULL) {
+                errno = ENOMEM;
+                return -1;
+            }
+            cur_pos = new_lineptr + (cur_pos - *lineptr);
+            *lineptr = new_lineptr;
+            *n = new_lineptr_len;
+        }
+
+        *cur_pos++ = (char)c;
+
+        if (c == delim)
+            break;
+    }
+
+    *cur_pos = '\0';
+    return (ssize_t)(cur_pos - *lineptr);
+}
+
+ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
+    return getdelim(lineptr, n, '\n', stream);
+}
 
 static struct playlist_song *get_tail_item(struct playlist *playlist)
 {
@@ -35,6 +114,49 @@ static struct playlist_song *get_tail_item(struct playlist *playlist)
 	return tail;
 }
 
+static void populate_playlist_from_string(struct playlist *playlist, char *filename)
+{
+	struct id3_meta meta;
+	int ret;
+
+	ESP_LOGI(TAG, "filename = %s", filename);
+
+	ret = db_song_get_meta_from_file(playlist->db_hdl, filename, &meta);
+	if (ret) {
+		ESP_LOGW(TAG, "Unable to read meta from %s", filename);
+		return ;
+	}
+
+	playlist_add_song(playlist, meta.artist, meta.album, meta.title);
+	db_put_meta(playlist->db_hdl, &meta);
+}
+
+static void populate_playlist_from_file(struct playlist *playlist, char *pls)
+{
+	char *line = NULL;
+	size_t len = 0;
+	FILE *f;
+	int sz;
+
+	f = fopen(pls, "r");
+	if (!f) {
+		ESP_LOGW(TAG, "Unable to open playlist %s", pls);
+		return ;
+	}
+
+	while (1) {
+		sz = getline(&line, &len, f);
+		if (sz < 0)
+			break;
+		if (line[sz - 1] == '\n')
+			line[sz - 1] = '\0';
+		populate_playlist_from_string(playlist, line);
+	}
+	free(line);
+
+	fclose(f);
+}
+
 void *playlist_create(void *db_hdl)
 {
 	struct playlist *playlist;
@@ -46,6 +168,19 @@ void *playlist_create(void *db_hdl)
 	memset(playlist, 0, sizeof(*playlist));
 	playlist->db_hdl = db_hdl;
 	ESP_LOGI(TAG , "create playlist %p", playlist);
+
+	return playlist;
+}
+
+void *playlist_create_from_file(void *db_hdl, char *pls)
+{
+	struct playlist *playlist = playlist_create(db_hdl);
+
+	if (!playlist)
+		return NULL;
+
+	playlist->is_db_close_on_exit = 1;
+	populate_playlist_from_file(playlist, pls);
 
 	return playlist;
 }
@@ -65,6 +200,8 @@ void playlist_destroy(void *hdl)
 		free(current);
 		current = next;
 	}
+	if (playlist->is_db_close_on_exit)
+		db_close(playlist->db_hdl);
 	free(playlist);
 	ESP_LOGI(TAG , "destroy playlist %p", playlist);
 }
@@ -117,14 +254,17 @@ int playlist_next(void *hdl, struct playlist_item *item)
 					      playlist->current->artist,
 					      playlist->current->album,
 					      playlist->current->title);
-	if (!item->filepath)
+	if (!item->filepath) {
+		ESP_LOGW(TAG, "unable to fetch filepath for playlist %p | %s/%s/%s", playlist, playlist->current->artist, playlist->current->album, playlist->current->title);
 		return -1;
+	}
 	ret = db_song_get_meta(playlist->db_hdl,
 			       playlist->current->artist,
 			       playlist->current->album,
 			       playlist->current->title,
 			       &item->meta);
 	if (ret) {
+		ESP_LOGW(TAG, "unable for fetch metadata for playlist %p | %s/%s/%s", playlist, playlist->current->artist, playlist->current->album, playlist->current->title);
 		db_put_item(playlist->db_hdl, item->filepath);
 		return -1;
 	}

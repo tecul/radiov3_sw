@@ -9,6 +9,7 @@ struct playlist_item {
 };
 
 void *playlist_create(void *db_hdl);
+void *playlist_create_from_file(void *db_hdl, char *pls);
 void playlist_destroy(void *hdl);
 int playlist_add_song(void *hdl, char *artist, char *album, char *title);
 int playlist_rewind(void *hdl);

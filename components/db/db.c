@@ -850,6 +850,28 @@ int db_song_get_meta(void *hdl, char *artist, char *album, char *song, struct id
 	return 0;
 }
 
+int db_song_get_meta_from_file(void *hdl, char *path, struct id3_meta *meta)
+{
+	struct db *db = hdl;
+	struct db_info db_info;
+	char *filename;
+	int ret;
+
+	filename = concat(db->dirname, path);
+	if (!filename)
+		return -1;
+	memset(&db_info, 0, sizeof(db_info));
+	ret = read_db_info_by_filename(filename, &db_info);
+	free(filename);
+	if (ret)
+		return ret;
+
+	free(db_info.filepath);
+	*meta = db_info.meta;
+
+	return 0;
+}
+
 void db_put_meta(void *hdl, struct id3_meta *meta)
 {
 	id3_put(meta);
