@@ -10,6 +10,11 @@
 #include "esp_log.h"
 
 #include "mongoose.h"
+#include "ring.h"
+
+#define MIN(a,b)	((a) < (b) ? (a) : (b))
+#define RING_SZ_KB	(64)
+#define BUFFER_SZ	(8 * 1024)
 
 static const char* TAG = "rv3.web_server";
 
@@ -21,11 +26,87 @@ static const char *sdcard_root = "/sdcard";
 
 typedef int (*cb_handle)(struct mg_connection *nc, struct http_message *hm, char *path);
 
+struct web_upload {
+	volatile bool is_active;
+	TaskHandle_t task;
+	SemaphoreHandle_t sem_en_of_task;
+	void *ring;
+	FILE *f;
+};
+
 static struct web_server {
 	volatile bool is_active;
 	TaskHandle_t task;
 	SemaphoreHandle_t sem_en_of_task;
+	struct web_upload wu;
 } server;
+
+static void server_copy_task(void *arg)
+{
+	struct web_upload *wu = &server.wu;
+	char buffer[BUFFER_SZ];
+	int len_copy;
+	int wr_pos = 0;
+	int ret;
+	int total_copy = 0;
+
+	while (1) {
+		len_copy = BUFFER_SZ - wr_pos;
+		ret = ring_pop(wu->ring, &len_copy, &buffer[wr_pos]);
+		if (ret) {
+			if (wu->is_active)
+				continue;
+			break;
+		}
+		wr_pos += len_copy;
+		if (wr_pos == BUFFER_SZ) {
+			assert(wu->f);
+			total_copy += BUFFER_SZ;
+			fwrite(buffer, 1, BUFFER_SZ, wu->f);
+			wr_pos = 0;
+		}
+	}
+
+	if (wr_pos) {
+		total_copy += wr_pos;
+		fwrite(buffer, 1, wr_pos, wu->f);
+	}
+	fclose(wu->f);
+	ESP_LOGI(TAG, " copy length is %d bytes", total_copy);
+
+	xSemaphoreGive(wu->sem_en_of_task);
+	vTaskDelete(NULL);
+}
+
+static void start_copy_thread(char *full_path)
+{
+	struct web_upload *wu = &server.wu;
+	BaseType_t res;
+
+	ESP_LOGI(TAG, "Starting copy %s", full_path);
+	wu->is_active = true;
+	wu->f = NULL;
+	wu->ring = ring_create(RING_SZ_KB);
+	assert(wu->ring);
+
+	wu->sem_en_of_task = xSemaphoreCreateBinary();
+	assert(wu->sem_en_of_task);
+
+	res = xTaskCreatePinnedToCore(server_copy_task, "web_copy", 3 * 4096, NULL,
+			tskIDLE_PRIORITY + 1, &wu->task, tskNO_AFFINITY);
+	assert(res == pdPASS);
+}
+
+static void stop_copy_thread()
+{
+	struct web_upload *wu = &server.wu;
+
+	ESP_LOGI(TAG, "Stopping copy");
+	wu->is_active = false;
+	xSemaphoreTake(wu->sem_en_of_task, portMAX_DELAY);
+	ring_destroy(wu->ring);
+	vSemaphoreDelete(wu->sem_en_of_task);
+}
 
 static char *concat(char *str1, char *str2)
 {
@@ -294,6 +375,8 @@ static struct mg_str upload_fname(struct mg_connection *nc, struct mg_str fname)
 	lfn.p = full_path;
 	free(path);
 
+	start_copy_thread(full_path);
+
 	return lfn;
 
 error:
@@ -307,6 +390,28 @@ error:
 	return lfn;
 }
 
+size_t upload_fwrite(const void *ptr, size_t size, size_t count, FILE *f)
+{
+	struct web_upload *wu = &server.wu;
+	int ret;
+
+	if (!wu->f)
+		wu->f = f;
+
+	do {
+		ret = ring_push(wu->ring, count, (void *) ptr);
+	} while (ret);
+
+	return count;
+}
+
+int upload_fclose(FILE *f)
+{
+	stop_copy_thread();
+
+	return 0;
+}
+
 static void handle_upload(struct mg_connection *nc, int ev, void *p)
 {
 	switch (ev) {
@@ -314,7 +419,7 @@ static void handle_upload(struct mg_connection *nc, int ev, void *p)
 	case MG_EV_HTTP_PART_BEGIN:
 	case MG_EV_HTTP_PART_END:
 	case MG_EV_HTTP_MULTIPART_REQUEST_END:
-		mg_file_upload_handler(nc, ev, p, upload_fname);
+		mg_file_upload_handler(nc, ev, p, upload_fname, upload_fwrite, upload_fclose);
 		break;
 	default:
 		break;

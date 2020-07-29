@@ -5088,6 +5088,8 @@ void mg_http_serve_file(struct mg_connection *nc, struct http_message *hm,
 /* Callback prototype for `mg_file_upload_handler()`. */
 typedef struct mg_str (*mg_fu_fname_fn)(struct mg_connection *nc,
                                         struct mg_str fname);
+typedef size_t (*mg_fu_fwrite_fn)(const void *ptr, size_t size, size_t count, FILE *f);
+typedef int (*mg_fu_fclose_fn)(FILE *f);
 
 /*
  * File upload handler.
@@ -5122,7 +5124,8 @@ typedef struct mg_str (*mg_fu_fname_fn)(struct mg_connection *nc,
  * ```
  */
 void mg_file_upload_handler(struct mg_connection *nc, int ev, void *ev_data,
-                            mg_fu_fname_fn local_name_fn
+                            mg_fu_fname_fn local_name_fn, mg_fu_fwrite_fn local_write_fn,
+                            mg_fu_fclose_fn local_close_fn
                                 MG_UD_ARG(void *user_data));
 #endif /* MG_ENABLE_HTTP_STREAMING_MULTIPART */
 #endif /* MG_ENABLE_FILESYSTEM */

@@ -8425,7 +8425,8 @@ void mg_serve_http(struct mg_connection *nc, struct http_message *hm,
 
 #if MG_ENABLE_HTTP_STREAMING_MULTIPART
 void mg_file_upload_handler(struct mg_connection *nc, int ev, void *ev_data,
-                            mg_fu_fname_fn local_name_fn
+                            mg_fu_fname_fn local_name_fn, mg_fu_fwrite_fn local_write_fn,
+                            mg_fu_fclose_fn local_close_fn
                                 MG_UD_ARG(void *user_data)) {
   switch (ev) {
     case MG_EV_HTTP_PART_BEGIN: {
@@ -8477,7 +8478,8 @@ void mg_file_upload_handler(struct mg_connection *nc, int ev, void *ev_data,
       struct file_upload_state *fus =
           (struct file_upload_state *) mp->user_data;
       if (fus == NULL || fus->fp == NULL) break;
-      if (mg_fwrite(mp->data.p, 1, mp->data.len, fus->fp) != mp->data.len) {
+      //if (mg_fwrite(mp->data.p, 1, mp->data.len, fus->fp) != mp->data.len) {
+      if (local_write_fn(mp->data.p, 1, mp->data.len, fus->fp) != mp->data.len) {
         LOG(LL_ERROR, ("Failed to write to %s: %d, wrote %d", fus->lfn,
                        mg_get_errno(), (int) fus->num_recd));
         if (mg_get_errno() == ENOSPC
@@ -8499,7 +8501,8 @@ void mg_file_upload_handler(struct mg_connection *nc, int ev, void *ev_data,
           mg_printf(nc, "Failed to write to %s: %d, wrote %d", mp->file_name,
                     mg_get_errno(), (int) fus->num_recd);
         }
-        fclose(fus->fp);
+        //fclose(fus->fp);
+        local_close_fn(fus->fp);
         remove(fus->lfn);
         fus->fp = NULL;
         /* Do not close the connection just yet, discard remainder of the data.
@@ -8528,7 +8531,8 @@ void mg_file_upload_handler(struct mg_connection *nc, int ev, void *ev_data,
          * HTTP reply
          */
       }
-      if (fus->fp != NULL) fclose(fus->fp);
+      //if (fus->fp != NULL) fclose(fus->fp);
+      if (fus->fp != NULL) local_close_fn(fus->fp);
       MG_FREE(fus->lfn);
       MG_FREE(fus);
       mp->user_data = NULL;

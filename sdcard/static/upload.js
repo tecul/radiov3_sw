@@ -274,6 +274,7 @@ function myOnDrop(event, treeId, treeNodes, targetNode, moveType)
 {
 	let path = targetNode ? targetNode.path : '';
 	recursiveFileParse(treeNodes, path);
+	$("#status").text("Upload finished !!!");
 }
 
 var setting2 = {
