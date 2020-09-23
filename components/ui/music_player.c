@@ -23,6 +23,7 @@ enum music_player_button {
 	MUSIC_PLAYER_UP,
 	MUSIC_PLAYER_DOWN,
 	MUSIC_PLAYER_NEXT,
+	MUSIC_PLAYER_RANDOM,
 	MUSIC_PLAYER_NB
 };
 
@@ -136,9 +137,19 @@ static void music_player_event_cb(lv_obj_t *btn, lv_event_t event)
 	case MUSIC_PLAYER_NEXT:
 		player->state = STATE_SONG_NEXT;
 		break;
+	case MUSIC_PLAYER_RANDOM:
+		/* do nothing */
+		break;
 	default:
 		assert(0);
 	}
+}
+
+static int is_random_mode(struct music_player *player)
+{
+	lv_btn_state_t st = lv_btn_get_state(player->btn[MUSIC_PLAYER_RANDOM]);
+
+	return LV_BTN_STATE_REL == st;
 }
 
 static void start_next_song(struct music_player *player)
@@ -146,7 +157,7 @@ static void start_next_song(struct music_player *player)
 	struct playlist_item item;
 	int ret;
 
-	ret = playlist_next(player->playlist_hdl, &item);
+	ret = playlist_next(player->playlist_hdl, &item, is_random_mode(player));
 	ESP_LOGI(TAG, "start_next_song ret = %d\n", ret);
 	if (ret) {
 		player->state = STATE_PLAYLIST_DONE;
@@ -207,13 +218,13 @@ static void setup_new_screen(struct music_player *player)
 static void music_player_screen(struct music_player *player)
 {
 	const int sizes[MUSIC_PLAYER_NB][2] = {
-		{60, 55}, {60, 55}, {60, 55}, {60, 55}, {60, 55}
+		{60, 55}, {60, 55}, {60, 55}, {60, 55}, {60, 55}, {60, 55}
 	};
 	const lv_point_t pos[MUSIC_PLAYER_NB] = {
-		{20, 24}, {20, 168}, {240, 24}, {240, 168}, {20, 120 - 27}
+		{20, 24}, {20, 168}, {240, 24}, {240, 168}, {20, 120 - 27}, {240, 120 - 27}
 	};
 	const char *labels[MUSIC_PLAYER_NB] = {
-		"MENU", "BACK", "UP", "DOWN", "NEXT"
+		"MENU", "BACK", "UP", "DOWN", "NEXT", "RAND"
 	};
 	int i;
 
@@ -232,6 +243,8 @@ static void music_player_screen(struct music_player *player)
 		lv_label_set_text(player->label[i], labels[i]);
 		lv_obj_set_event_cb(player->btn[i], music_player_event_cb);
 	}
+	lv_btn_set_toggle(player->btn[MUSIC_PLAYER_RANDOM], true);
+	lv_btn_set_state(player->btn[MUSIC_PLAYER_RANDOM], LV_BTN_STATE_TGL_REL);
 
 	player->msg_label = lv_label_create(player->scr, NULL);
 	assert(player->msg_label);

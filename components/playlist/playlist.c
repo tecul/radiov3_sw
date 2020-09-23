@@ -1,5 +1,6 @@
 #include "playlist.h"
 
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -13,15 +14,17 @@ struct playlist_song {
 	char *artist;
 	char *album;
 	char *title;
+	int index;
 };
 
 struct playlist {
 	void *db_hdl;
 	int is_db_close_on_exit;
-	struct playlist_song *root;
-	struct playlist_song *current;
+	struct playlist_song *unplayed;
+	int unplayed_nb;
+	struct playlist_song *played;
+	int played_nb;
 	int song_nb;
-	int song_idx;
 };
 
 /* taken from https://raw.githubusercontent.com/ivanrad/getline/master/getline.c */
@@ -101,10 +104,8 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
     return getdelim(lineptr, n, '\n', stream);
 }
 
-static struct playlist_song *get_tail_item(struct playlist *playlist)
+static struct playlist_song *list_tail_elem(struct playlist_song *tail)
 {
-	struct playlist_song *tail = playlist->root;
-
 	if (!tail)
 		return NULL;
 
@@ -157,6 +158,68 @@ static void populate_playlist_from_file(struct playlist *playlist, char *pls)
 	fclose(f);
 }
 
+static void list_destroy_elem(struct playlist_song *current)
+{
+	struct playlist_song *next;
+
+	while (current) {
+		ESP_LOGI(TAG , " destroy playlist item %p | %s/%s/%s", current, current->artist, current->album, current->title);
+		next = current->next;
+		free(current->artist);
+		free(current->album);
+		free(current->title);
+		free(current);
+		current = next;
+	}
+}
+
+static struct playlist_song *list_remove_at_index(struct playlist_song *current,
+						  int index,
+						  struct playlist_song **remove)
+{
+	struct playlist_song *head = current;
+	struct playlist_song *prev = NULL;
+	struct playlist_song *next;
+
+	while (index--) {
+		prev = current;
+		current = current->next;
+	}
+	*remove = current;
+
+	next = current->next;
+	current->next = NULL;
+
+	if (head == current)
+		return next;
+
+	prev->next = next;
+
+	return head;
+}
+
+static struct playlist_song *select_next(struct playlist *playlist, int is_random)
+{
+	struct playlist_song *current;
+	int index;
+
+	if (!playlist->unplayed_nb)
+		return NULL;
+
+	index = is_random ? rand() % playlist->unplayed_nb : 0;
+	ESP_LOGD(TAG , "select index %d among [%d:%d[ / mode is %d",
+		 index, 0, playlist->unplayed_nb, is_random);
+
+	playlist->unplayed = list_remove_at_index(playlist->unplayed, index, &current);
+	playlist->unplayed_nb--;
+
+	current->next = playlist->played;
+	playlist->played = current;
+	playlist->played_nb++;
+
+	return current;
+}
+
 void *playlist_create(void *db_hdl)
 {
 	struct playlist *playlist;
@@ -188,18 +251,10 @@ void *playlist_create_from_file(void *db_hdl, char *pls)
 void playlist_destroy(void *hdl)
 {
 	struct playlist *playlist = hdl;
-	struct playlist_song *current = playlist->root;
-	struct playlist_song *next;
 
-	while (current) {
-		ESP_LOGI(TAG , " destroy playlist item %p/%p | %s/%s/%s", playlist, current, current->artist, current->album, current->title);
-		next = current->next;
-		free(current->artist);
-		free(current->album);
-		free(current->title);
-		free(current);
-		current = next;
-	}
+	list_destroy_elem(playlist->played);
+	list_destroy_elem(playlist->unplayed);
+
 	if (playlist->is_db_close_on_exit)
 		db_close(playlist->db_hdl);
 	free(playlist);
@@ -210,67 +265,64 @@ int playlist_add_song(void *hdl, char *artist, char *album, char *title)
 {
 	struct playlist *playlist = hdl;
 	struct playlist_song *new;
-	struct playlist_song *tail = get_tail_item(playlist);
+	struct playlist_song *tail = list_tail_elem(playlist->unplayed);
 
 	new = malloc(sizeof(*new));
 	if (!new)
 		return -1;
 
-	if (tail)
-		tail->next = new;
-	else
-		playlist->root = new;
 	new->next = NULL;
 	new->artist = strdup(artist);
 	new->album = strdup(album);
 	new->title = strdup(title);
+	new->index = playlist->song_nb++;
+	playlist->unplayed_nb++;
+	if (tail)
+		tail->next = new;
+	else
+		playlist->unplayed = new;
 
 	ESP_LOGI(TAG , " add playlist item %p/%p | %s/%s/%s", playlist, new, artist, album, title);
-	playlist->song_nb++;
 
 	return 0;
 }
 
 int playlist_rewind(void *hdl)
 {
-	struct playlist *playlist = hdl;
-
-	playlist->current = NULL;
-	playlist->song_idx = 0;
-
-	return 0;
+	return -1;
 }
 
-int playlist_next(void *hdl, struct playlist_item *item)
+int playlist_next(void *hdl, struct playlist_item *item, int is_random)
 {
 	struct playlist *playlist = hdl;
+	struct playlist_song *current;
 	int ret;
 
-	playlist->current = playlist->current ? playlist->current->next : playlist->root;
-	if (!playlist->current)
+
+	current = select_next(playlist, is_random);
+	if (!current)
 		return -1;
 
 	item->filepath = db_song_get_filepath(playlist->db_hdl,
-					      playlist->current->artist,
-					      playlist->current->album,
-					      playlist->current->title);
+					      current->artist,
+					      current->album,
+					      current->title);
 	if (!item->filepath) {
-		ESP_LOGW(TAG, "unable to fetch filepath for playlist %p | %s/%s/%s", playlist, playlist->current->artist, playlist->current->album, playlist->current->title);
+		ESP_LOGW(TAG, "unable to fetch filepath for playlist %p | %s/%s/%s", playlist, current->artist, current->album, current->title);
 		return -1;
 	}
 	ret = db_song_get_meta(playlist->db_hdl,
-			       playlist->current->artist,
-			       playlist->current->album,
-			       playlist->current->title,
+			       current->artist,
+			       current->album,
+			       current->title,
 			       &item->meta);
 	if (ret) {
-		ESP_LOGW(TAG, "unable for fetch metadata for playlist %p | %s/%s/%s", playlist, playlist->current->artist, playlist->current->album, playlist->current->title);
+		ESP_LOGW(TAG, "unable for fetch metadata for playlist %p | %s/%s/%s", playlist, current->artist, current->album, current->title);
 		db_put_item(playlist->db_hdl, item->filepath);
 		return -1;
 	}
 
-	ESP_LOGI(TAG , " queue playlist item %p/%p | %s/%s/%s | %s", playlist, playlist->current, item->meta.artist, item->meta.album, item->meta.title, item->filepath);
-	playlist->song_idx++;
+	ESP_LOGI(TAG , " queue playlist item %p/%p | %s/%s/%s | %s", playlist, current, item->meta.artist, item->meta.album, item->meta.title, item->filepath);
 
 	return 0;
 }
@@ -301,5 +353,5 @@ int playlist_song_idx(void *hdl)
 {
 	struct playlist *playlist = hdl;
 
-	return playlist->song_idx;
+	return playlist->played_nb;
 }
