@@ -6,11 +6,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "esp_log.h"
 
 #include "mad.h"
 
 #include "ring.h"
 #include "stb350.h"
+
+static const char* TAG = "rv3.maddec";
 
 #define INPUT_BUFFER_SIZE					2 * 1024
 
@@ -49,9 +52,9 @@ static void maddec_task(void *arg)
 	struct maddec *self = arg;
 	int res;
 
-	printf("mad_decoder_run\n");
+	ESP_LOGI(TAG, "mad_decoder_run\n");
 	res = mad_decoder_run(&self->decoder, MAD_DECODER_MODE_SYNC);
-	printf("mad_decoder_finish %d\n", res);
+	ESP_LOGI(TAG, "mad_decoder_finish %d\n", res);
 
 	xSemaphoreGive(self->sem_en_of_task);
 	vTaskDelete(NULL);

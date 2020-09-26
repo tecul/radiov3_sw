@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 #include "lvgl/lvgl.h"
 #include "esp_log.h"
@@ -22,6 +24,17 @@ static const char *btns[] ={"Stop web server", ""};
 static const char *btns_about[] ={"Exit", ""};
 static lv_style_t modal_style;
 static lv_obj_t *mbox;
+
+static ui_hdl current;
+/* log output */
+#define CONSOLE_SERIAL		0
+#define CONSOLE_NETWORK		1
+#define CONSOLE_BUFFER_LEN	1024
+
+static int console_type = CONSOLE_SERIAL;
+static int console_socket;
+static struct sockaddr_in console_address;
+static char *console_buffer;
 
 static void web_server_event_handler(lv_obj_t * obj, lv_event_t event)
 {
@@ -119,11 +132,72 @@ static void display_about_message()
 	lv_obj_set_event_cb(mbox, about_event_handler);
 }
 
+static int vnetwork(const char *format, va_list va)
+{
+	int res = vsnprintf(console_buffer, CONSOLE_BUFFER_LEN, format, va);
+
+	sendto(console_socket, console_buffer, strlen(console_buffer), 0, (struct sockaddr *) &console_address, sizeof(console_address));
+
+	return res;
+}
+
+static int console_serial()
+{
+	ESP_LOGI(TAG, "Will switch to serial console");
+	esp_log_set_vprintf(&vprintf);
+	ESP_LOGI(TAG, "Switch to serial console done");
+	if (console_socket) {
+		close(console_socket);
+		console_socket = 0;
+		free(console_buffer);
+		console_buffer = NULL;
+	}
+
+	return CONSOLE_SERIAL;
+}
+
+static int console_network()
+{
+	if (!wifi_is_connected())
+		return CONSOLE_SERIAL;
+
+	console_socket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (!console_socket)
+		return CONSOLE_SERIAL;
+
+	console_buffer = malloc(CONSOLE_BUFFER_LEN);
+	if (!console_buffer) {
+		close(console_socket);
+		console_socket = 0;
+		return CONSOLE_SERIAL;
+	}
+
+	memset(&console_address, 0, sizeof(struct sockaddr_in));
+	console_address.sin_family = AF_INET;
+	console_address.sin_port = htons(8888);
+	console_address.sin_addr.s_addr = INADDR_BROADCAST;
+
+	ESP_LOGI(TAG, "Will switch to network console");
+	ESP_LOGI(TAG, "socat -u udp-recv:8888,reuseaddr -");
+	esp_log_set_vprintf(&vnetwork);
+	ESP_LOGI(TAG, "Switch to network console done");
+
+	return CONSOLE_NETWORK;
+}
+
+static void console_toggle()
+{
+	console_type = console_type == CONSOLE_NETWORK ? console_serial() : console_network();
+}
+
 const char *settings_labels[] = {"start web server", "database update", "fw update",
 	"wifi", "touch screen", "about"};
 
 static char *settings_get_item_label(void *ctx, int index)
 {
+	if (index == 6)
+		return console_type == CONSOLE_NETWORK ? "network console" : "serial console";
+
 	return (char *) settings_labels[index];
 }
 
@@ -132,6 +206,10 @@ static void settings_select_item(void *ctx, char *selected_label, int index)
 	ESP_LOGI(TAG, "select index %d\n", index);
 
 	switch (index) {
+	case 6:
+		console_toggle();
+		paging_menu_refresh(current);
+		break;
 	case 5:
 		display_about_message();
 		break;
@@ -168,5 +246,10 @@ static struct paging_cbs cbs = {
 
 ui_hdl settings_create()
 {
-	return paging_menu_create(ARRAY_SIZE(settings_labels), &cbs, NULL);
+	ui_hdl res;
+
+	res = paging_menu_create(ARRAY_SIZE(settings_labels) + 1, &cbs, NULL);
+	current = res;
+
+	return res;
 }

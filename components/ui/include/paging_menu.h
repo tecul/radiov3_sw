@@ -13,5 +13,6 @@ struct paging_cbs {
 };
 
 ui_hdl paging_menu_create(int item_nb, struct paging_cbs *cbs, void *ctx);
+void paging_menu_refresh(ui_hdl hdl);
 
 #endif

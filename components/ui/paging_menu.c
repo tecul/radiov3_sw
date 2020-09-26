@@ -287,3 +287,10 @@ ui_hdl paging_menu_create(int item_nb, struct paging_cbs *cbs, void *ctx)
 
 	return &menu->cbs;
 }
+
+void paging_menu_refresh(ui_hdl hdl)
+{
+	struct paging_menu *menu = container_of(hdl, struct paging_menu, cbs);
+
+	paging_menu_setup_page(menu, menu->page_nb);
+}
