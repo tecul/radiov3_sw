@@ -1,0 +1,35 @@
+{
+	radio: {
+		name: "Radio ISA",
+		url: "radioisavoiron.ice.infomaniak.ch",
+		port: "80",
+		path: "/radioisavoiron-128.mp3"
+	},
+	radio: {
+		name: "RTL2",
+		url: "streaming.radio.rtl2.fr",
+		port: "80",
+		path: "/rtl2-1-44-128"
+	},
+	radio: {
+		name: "France info",
+		url: "icecast.radiofrance.fr",
+		port: "80",
+		path: "/franceinfo-midfi.mp3"
+	},
+	radio: {
+		name: "France inter",
+		url: "icecast.radiofrance.fr",
+		port: "80",
+		path: "/franceinter-midfi.mp3"
+	},
+	dir: {
+		name: "broken",
+		radio: {
+			name: "Europe 1",
+			url: "e1-live-mp3-128.scdn.arkena.com",
+			port: "80",
+			path: "/europe1.mp3"
+		}
+	}
+}

@@ -30,7 +30,7 @@ static void main_select_item(void *ctx, char *selected_label, int index)
 
 	switch (index) {
 	case 0:
-		radio_menu_create();
+		radio_menu_create("/sdcard/radio/radio.db");
 		break;
 	case 1:
 		artist_menu_create();

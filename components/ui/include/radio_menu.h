@@ -3,6 +3,6 @@
 
 #include "ui.h"
 
-ui_hdl radio_menu_create(void);
+ui_hdl radio_menu_create(char *db_filename);
 
 #endif
