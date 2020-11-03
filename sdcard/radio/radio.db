@@ -23,13 +23,10 @@
 		port: "80",
 		path: "/franceinter-midfi.mp3"
 	},
-	dir: {
-		name: "broken",
-		radio: {
-			name: "Europe 1",
-			url: "e1-live-mp3-128.scdn.arkena.com",
-			port: "80",
-			path: "/europe1.mp3"
-		}
+	radio: {
+		name: "Europe 1",
+		url: "ais-live.cloud-services.paris",
+		port: "8000",
+		path: "/europe1.mp3"
 	}
 }

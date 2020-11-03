@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<HTML>
+<HTML style="height: 100%";>
  <HEAD>
   <TITLE> Playlist manager </TITLE>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
@@ -22,13 +22,15 @@ div#rMenu ul li{
   <link rel="stylesheet" href="playlist.css" type="text/css">
   <script type="text/javascript" src="playlist.js"></script>
  </HEAD>
-<BODY>
-  <ul id="musicpane" class="ztree" style="float: left;"></ul>
-  <ul id="playlist" class="ztree" style="float: left;">
-    <button id="save" disabled>save</button>
-    <button id="cancel" disabled>cancel</button>
-  </ul>
-  <ul id="playlistpane" class="ztree"></ul>
+<BODY style="height: 100%;">
+  <div style="width: 100%;height: 100%; display: flex;">
+    <ul id="musicpane" class="ztree" style="flex: 1;height: 90%;overflow-x:scroll;"></ul>
+    <ul id="playlist" class="ztree" style="flex: 1;height: 90%;overflow-x:scroll;">
+      <button id="save" disabled>save</button>
+      <button id="cancel" disabled>cancel</button>
+    </ul>
+    <ul id="playlistpane" class="ztree" style="flex: 1;height: 90%;overflow-x:scroll;"></ul>
+  </div>
   <div id="rMenu">
     <ul>
       <li id="m_add_dir" onclick="add_dir_menu();" >Add Directory</li>

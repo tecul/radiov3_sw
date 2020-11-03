@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<HTML>
+<HTML style="height: 100%;">
  <HEAD>
   <TITLE> Music uploader </TITLE>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
@@ -13,13 +13,15 @@
     .ztree li span.button.add {margin-left:2px; margin-right: -1px; background-position:-144px 0; vertical-align:top; *vertical-align:middle}
   </style>
  </HEAD>
-<BODY>
-<div style="width: 100%; overflow: hidden;">
-  <ul id="treeDemo2" class="ztree" style="float: left;">
-    <input type="file" id="filepicker" name="fileList" webkitdirectory/>
-  </ul>
-  <ul id="treeDemo" class="ztree"></ul>
-  <h2 id="status"></h2>
+<BODY style="height: 100%;">
+<div style="width: 100%;height: 100%; overflow: hidden;">
+  <h2 id="status" style="text-align: center;">Drag and drop music from left pane to right pane</h2>
+  <div style="width: 100%;height: 100%; display: flex;">
+    <ul id="treeDemo2" class="ztree" style="flex: 1;height: 80%;overflow-x:scroll;">
+      <input type="file" id="filepicker" name="fileList" webkitdirectory/>
+    </ul>
+    <ul id="treeDemo" class="ztree" style="flex: 1;height: 80%;overflow-x:scroll;"></ul>
+  </div>
 </div>
 </BODY>
 </HTML>
