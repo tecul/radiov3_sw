@@ -101,11 +101,12 @@ void audio_init()
 	printf("audio init done\n");
 }
 
-void audio_radio_play(char *url, char *port_nb, char *path)
+void audio_radio_play(char *url, char *port_nb, char *path, int rate)
 {
 	if (is_playing)
 		audio_radio_stop();
 
+	i2s_set_sample_rates(0, rate);
 	assert(stb350_start(stb350_hdl) == 0);
 	fetch_socket_radio_start(socket_hdl, url, port_nb, path);
 	maddec_start(decoder_hdl);

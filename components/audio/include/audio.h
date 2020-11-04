@@ -2,7 +2,7 @@
 #define __AUDIO__ 1
 
 void audio_init(void);
-void audio_radio_play(char *url, char *port_nb, char *path);
+void audio_radio_play(char *url, char *port_nb, char *path, int rate);
 void audio_radio_stop(void);
 void audio_music_play(char *filepath);
 void audio_music_stop(void);

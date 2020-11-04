@@ -43,6 +43,7 @@ struct radio {
 	char *url;
 	char *port;
 	char *path;
+	char *rate;
 };
 
 struct radio_menu {
@@ -219,6 +220,11 @@ static int primitive_is_path(struct db_parser *dbp, jsmntok_t *t)
 	return primitive_is_string(dbp, t, "path");
 }
 
+static int primitive_is_rate(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "rate");
+}
+
 static int primitive_is_dir(struct db_parser *dbp, jsmntok_t *t)
 {
 	return primitive_is_string(dbp, t, "dir");
@@ -284,6 +290,7 @@ static struct entry *parse_radio(struct db_parser *dbp, int start, int end)
 	char *url = NULL;
 	char *port = NULL;
 	char *path = NULL;
+	char *rate = NULL;
 	jsmntok_t *t;
 	struct radio *radio;
 
@@ -302,17 +309,20 @@ static struct entry *parse_radio(struct db_parser *dbp, int start, int end)
 			port = dup_next_string_in_range(dbp, to->start, to->end);
 		else if (primitive_is_path(dbp, t))
 			path = dup_next_string_in_range(dbp, to->start, to->end);
+		else if (primitive_is_rate(dbp, t))
+			rate = dup_next_string_in_range(dbp, to->start, to->end);
 		t = fetch_next_token_in_range(dbp, to->start, to->end);
 	}
 	radio = malloc(sizeof(*radio));
 	if (radio)
 		memset(radio, 0, sizeof(*radio));
-	if (radio && name && url && port && path) {
+	if (radio && name && url && port && path && rate) {
 		radio->entry.name = name;
 		radio->entry.type = ENTRY_RADIO;
 		radio->url = url;
 		radio->port = port;
 		radio->path = path;
+		radio->rate = rate;
 	} else {
 		if (radio)
 			free(radio);
@@ -324,6 +334,8 @@ static struct entry *parse_radio(struct db_parser *dbp, int start, int end)
 			free(port);
 		if (path)
 			free(path);
+		if (rate)
+			free(rate);
 		radio = NULL;
 	}
 
@@ -402,6 +414,7 @@ static void radio_db_delete(struct entry *root)
 			free(radio->url);
 			free(radio->port);
 			free(radio->path);
+			free(radio->rate);
 			free(radio);
 		} else if (current->type == ENTRY_FOLDER) {
 			radio_db_delete(current->sub);
@@ -470,7 +483,7 @@ static void radio_menu_select_radio(struct radio_menu *menu, struct entry *entry
 	struct radio *radio = container_of(entry, struct radio, entry);
 
 	ESP_LOGI(TAG, "select radio %s", entry->name);
-	radio_player_create(entry->name, radio->url, radio->port, radio->path);
+	radio_player_create(entry->name, radio->url, radio->port, radio->path, atoi(radio->rate));
 }
 
 static void radio_menu_select_folder(struct radio_menu *menu, struct entry *entry)
