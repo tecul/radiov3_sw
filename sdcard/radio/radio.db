@@ -1,37 +1,42 @@
-{
-	radio: {
-		name: "Radio ISA",
-		url: "radioisavoiron.ice.infomaniak.ch",
-		port: "80",
-		path: "/radioisavoiron-128.mp3",
-		rate: "44100"
+[
+	{
+		"radio": "Radio ISA",
+		"url": "radioisavoiron.ice.infomaniak.ch",
+		"port": "80",
+		"path": "/radioisavoiron-128.mp3",
+		"rate": "44100"
 	},
-	radio: {
-		name: "RTL2",
-		url: "streaming.radio.rtl2.fr",
-		port: "80",
-		path: "/rtl2-1-44-128",
-		rate: "44100"
+	{
+		"radio": "RTL2",
+		"url": "streaming.radio.rtl2.fr",
+		"port": "80",
+		"path": "/rtl2-1-44-128",
+		"rate": "44100"
 	},
-	radio: {
-		name: "France info",
-		url: "icecast.radiofrance.fr",
-		port: "80",
-		path: "/franceinfo-midfi.mp3",
-		rate: "48000"
+	{
+		"radio": "France info",
+		"url": "icecast.radiofrance.fr",
+		"port": "80",
+		"path": "/franceinfo-midfi.mp3",
+		"rate": "48000"
 	},
-	radio: {
-		name: "France inter",
-		url: "icecast.radiofrance.fr",
-		port: "80",
-		path: "/franceinter-midfi.mp3",
-		rate: "48000"
+	{
+		"radio": "France inter",
+		"url": "icecast.radiofrance.fr",
+		"port": "80",
+		"path": "/franceinter-midfi.mp3",
+		"rate": "48000"
 	},
-	radio: {
-		name: "Europe 1",
-		url: "ais-live.cloud-services.paris",
-		port: "8000",
-		path: "/europe1.mp3",
-		rate: "44100"
+	{
+		"folder": "divers",
+		"entries": [
+			{
+				"radio": "Europe 1",
+				"url": "ais-live.cloud-services.paris",
+				"port": "8000",
+				"path": "/europe1.mp3",
+				"rate": "44100"
+			}
+		]
 	}
-}
+]

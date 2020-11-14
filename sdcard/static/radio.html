@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<HTML style="height: 100%";>
+ <HEAD>
+  <TITLE> Playlist manager </TITLE>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" href="demoStyle/demo.css" type="text/css">
+  <link rel="stylesheet" href="zTreeStyle/zTreeStyle.css" type="text/css">
+  <link rel="stylesheet" href="radio.css" type="text/css">
+  <script type="text/javascript" src="jquery-3.5.1.min.js"></script>
+  <script type="text/javascript" src="jquery-ui-1.12.1/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="jquery.ztree.core.js"></script>
+  <script type="text/javascript" src="jquery.ztree.exedit.js"></script>
+  <script type="text/javascript" src="radio.js"></script>
+ </HEAD>
+<BODY style="height: 100%;">
+  <div style="width: 100%;height: 100%; display: flex;">
+    <ul id="radio" class="ztree" style="flex: 1;height: 90%;overflow-x:scroll;">
+      <button id="save" disabled>save</button>
+      <button id="cancel" disabled>cancel</button>
+    </ul>
+    <ul id="radiolistpane" class="ztree" style="flex: 1;height: 90%;overflow-x:scroll;">
+    </ul>
+  </div>
+  <div id="rMenuTop" class="menu">
+    <ul>
+      <li onclick="add_folder();" >Add Folder</li>
+      <li onclick="add_radio();">Add Radio</li>
+      <li onclick="save();">Save radio list on device</li>
+    </ul>
+  </div>
+  <div id="RMenuFolder" class="menu">
+    <ul>
+      <li onclick="add_folder();" >Add Folder</li>
+      <li onclick="add_radio();">Add Radio</li>
+      <li onclick="rename_node();">Rename Folder</li>
+      <li onclick="del_node();">Remove Folder</li>
+    </ul>
+  </div>
+  <div id="RMenuRadio" class="menu">
+    <ul>
+      <li onclick="edit_radio();" >Edit Radio</li>
+      <li onclick="rename_node();">Rename Radio</li>
+      <li onclick="del_node();">Remove Radio</li>
+    </ul>
+  </div>
+  Want more <a href="https://www.radio-browser.info">radios ?</a>
+</BODY>
+</HTML>

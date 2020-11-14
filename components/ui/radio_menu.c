@@ -51,11 +51,12 @@ struct radio_menu {
 	struct entry *entries;
 };
 
-static ui_hdl radio_menu_create_with_entry(struct entry *root, int is_root);
-static struct entry *radio_db_parse_object(struct db_parser *dbp, jsmntok_t *to, 
-					   struct entry *root);
 
 static const char* TAG = "rv3.radio_menu";
+
+static ui_hdl radio_menu_create_with_entry(struct entry *root, int is_root);
+static struct entry *radio_db_parse_array(struct db_parser *dbp, jsmntok_t *to, 
+					  struct entry *root);
 
 static char *concat_with_delim(char *str1, char *str2, char delim)
 {
@@ -144,6 +145,52 @@ static void db_parser_close(struct db_parser *dbp)
 	free(dbp->str);
 }
 
+static int primitive_is_string(struct db_parser *dbp, jsmntok_t *t, char *str)
+{
+	if (t->type != JSMN_STRING)
+		return 0;
+
+	if (strncmp(str, dbp->str + t->start, t->end - t->start))
+		return 0;
+
+	return 1;
+}
+
+static int primitive_is_folder(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "folder");
+}
+
+static int primitive_is_entries(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "entries");
+}
+
+static int primitive_is_radio(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "radio");
+}
+
+static int primitive_is_url(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "url");
+}
+
+static int primitive_is_port(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "port");
+}
+
+static int primitive_is_path(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "path");
+}
+
+static int primitive_is_rate(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "rate");
+}
+
 static jsmntok_t *fetch_next_token(struct db_parser *dbp)
 {
 	jsmntok_t *t;
@@ -171,65 +218,6 @@ static jsmntok_t *fetch_next_token_in_range(struct db_parser *dbp, int start, in
 	return t;
 }
 
-static jsmntok_t *fetch_next_primitive_in_range(struct db_parser *dbp, int start, int end)
-{
-	jsmntok_t *t = fetch_next_token_in_range(dbp, start, end);
-
-	while (t) {
-		if (t->type == JSMN_PRIMITIVE)
-			return t;
-		t = fetch_next_token_in_range(dbp, start, end);
-	}
-
-	return NULL;
-}
-
-static int primitive_is_string(struct db_parser *dbp, jsmntok_t *t, char *str)
-{
-	if (t->type != JSMN_PRIMITIVE)
-		return 0;
-
-	if (strncmp(str, dbp->str + t->start, t->end - t->start))
-		return 0;
-
-	return 1;
-}
-
-static int primitive_is_radio(struct db_parser *dbp, jsmntok_t *t)
-{
-	return primitive_is_string(dbp, t, "radio");
-}
-
-static int primitive_is_name(struct db_parser *dbp, jsmntok_t *t)
-{
-	return primitive_is_string(dbp, t, "name");
-}
-
-static int primitive_is_url(struct db_parser *dbp, jsmntok_t *t)
-{
-	return primitive_is_string(dbp, t, "url");
-}
-
-static int primitive_is_port(struct db_parser *dbp, jsmntok_t *t)
-{
-	return primitive_is_string(dbp, t, "port");
-}
-
-static int primitive_is_path(struct db_parser *dbp, jsmntok_t *t)
-{
-	return primitive_is_string(dbp, t, "path");
-}
-
-static int primitive_is_rate(struct db_parser *dbp, jsmntok_t *t)
-{
-	return primitive_is_string(dbp, t, "rate");
-}
-
-static int primitive_is_dir(struct db_parser *dbp, jsmntok_t *t)
-{
-	return primitive_is_string(dbp, t, "dir");
-}
-
 static char *dup_string(struct db_parser *dbp, jsmntok_t *t)
 {
 	if (!t)
@@ -246,72 +234,88 @@ static char *dup_next_string_in_range(struct db_parser *dbp, int start, int end)
 	return dup_string(dbp, fetch_next_token_in_range(dbp, start, end));
 }
 
-static struct entry *parse_dir(struct db_parser *dbp, int start, int end)
+static void sync_object_in_range(struct db_parser *dbp, int *start, int *end)
 {
-	jsmntok_t *to = fetch_next_token_in_range(dbp, start, end);
-	struct entry *dir;
-	jsmntok_t *t;
-	char *name;
+	jsmntok_t *t = fetch_next_token_in_range(dbp, *start, *end);
 
-	if (to->type != JSMN_OBJECT) {
-		printf("Need object type\n");
-		return NULL;
+	while (t) {
+		if (t->type == JSMN_OBJECT) {
+			*start = t->start;
+			*end = t->end;
+			return ;
+		}
+		t = fetch_next_token_in_range(dbp, *start, *end);
 	}
-
-	t = fetch_next_token_in_range(dbp, to->start, to->end);
-	if (!primitive_is_name(dbp, t)) {
-		printf("Need primitive name\n");
-		return NULL;
-	}
-
-	name = dup_next_string_in_range(dbp, to->start, to->end);
-	if (!name)
-		return NULL;
-
-	dir = malloc(sizeof(*dir));
-	if (!dir) {
-		free(name);
-		return NULL;
-	}
-
-	memset(dir, 0, sizeof(*dir));
-	dir->name = name;
-	dir->type = ENTRY_FOLDER;
-
-	dir->sub = radio_db_parse_object(dbp, to, NULL);
-
-	return dir;
 }
 
-static struct entry *parse_radio(struct db_parser *dbp, int start, int end)
+static struct entry *parse_folder_in_range(struct db_parser *dbp, int start, int end, jsmntok_t *t)
 {
-	jsmntok_t *to = fetch_next_token_in_range(dbp, start, end);
+	struct entry *folder;
+	char *name = NULL;
+
+	if (primitive_is_folder(dbp, t)) {
+		name = dup_next_string_in_range(dbp, start, end);
+		if (!name)
+			return NULL;
+		t = fetch_next_token_in_range(dbp, start, end);
+		if (!t || !primitive_is_entries(dbp, t)) {
+			free(name);
+			return NULL;
+		}
+		folder = malloc(sizeof(*folder));
+		if (!folder) {
+			free(name);
+			return NULL;
+		}
+		memset(folder, 0, sizeof(*folder));
+		folder->name = name;
+		folder->type = ENTRY_FOLDER;
+		folder->sub = radio_db_parse_array(dbp, fetch_next_token_in_range(dbp, start, end), NULL);
+	} else {
+		folder = malloc(sizeof(*folder));
+		if (!folder)
+			return NULL;
+		folder = malloc(sizeof(*folder));
+		if (!folder)
+			return NULL;
+		memset(folder, 0, sizeof(*folder));
+		folder->type = ENTRY_FOLDER;
+		folder->sub = radio_db_parse_array(dbp, fetch_next_token_in_range(dbp, start, end), NULL);
+		t = fetch_next_token_in_range(dbp, start, end);
+		/* FIXME : code below must recursively remove folder if error */
+		if (!t || !primitive_is_folder(dbp, t))
+			return NULL;
+		name = dup_next_string_in_range(dbp, start, end);
+		if (!name)
+			return NULL;
+		folder->name = name;
+	}
+
+	return folder;
+}
+
+static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int end, jsmntok_t *t)
+{
+	struct radio *radio;
 	char *name = NULL;
 	char *url = NULL;
 	char *port = NULL;
 	char *path = NULL;
 	char *rate = NULL;
-	jsmntok_t *t;
-	struct radio *radio;
 
-	if (to->type != JSMN_OBJECT) {
-		printf("Need object type\n");
-		return NULL;
-	}
-
-	t = fetch_next_token_in_range(dbp, to->start, to->end);
 	while (t) {
-		if (primitive_is_name(dbp, t))
-			name = dup_next_string_in_range(dbp, to->start, to->end);
+		//print_token(dbp, t);
+		if (primitive_is_radio(dbp, t))
+			name = dup_next_string_in_range(dbp, start, end);
 		else if (primitive_is_url(dbp, t))
-			url = dup_next_string_in_range(dbp, to->start, to->end);
+			url = dup_next_string_in_range(dbp, start, end);
 		else if (primitive_is_port(dbp, t))
-			port = dup_next_string_in_range(dbp, to->start, to->end);
+			port = dup_next_string_in_range(dbp, start, end);
 		else if (primitive_is_path(dbp, t))
-			path = dup_next_string_in_range(dbp, to->start, to->end);
+			path = dup_next_string_in_range(dbp, start, end);
 		else if (primitive_is_rate(dbp, t))
-			rate = dup_next_string_in_range(dbp, to->start, to->end);
-		t = fetch_next_token_in_range(dbp, to->start, to->end);
+			rate = dup_next_string_in_range(dbp, start, end);
+		t = fetch_next_token_in_range(dbp, start, end);
 	}
 	radio = malloc(sizeof(*radio));
 	if (radio)
@@ -337,46 +341,55 @@ static struct entry *parse_radio(struct db_parser *dbp, int start, int end)
 		if (rate)
 			free(rate);
 		radio = NULL;
+		return NULL;
 	}
 
 	return &radio->entry;
 }
 
-static struct entry *radio_db_parse_object(struct db_parser *dbp, jsmntok_t *to, 
-					   struct entry *root)
+static struct entry *fetch_next_entry_in_range(struct db_parser *dbp, int start, int end)
+{
+	jsmntok_t *t;
+
+	/* sync on next object in range and update start and end variable with
+	 * object range.
+	 */
+	sync_object_in_range(dbp, &start, &end);
+
+	/* read next token which must be string and that will allow to define
+	 * type of next object.
+	 */
+	t = fetch_next_token_in_range(dbp, start, end);
+	if (!t)
+		return NULL;
+	if (t->type != JSMN_STRING)
+		return NULL;
+
+	if (primitive_is_folder(dbp, t) || primitive_is_entries(dbp, t))
+		return parse_folder_in_range(dbp, start, end, t);
+	else
+		return parse_radio_in_range(dbp, start, end, t);
+}
+
+static struct entry *radio_db_parse_array(struct db_parser *dbp, jsmntok_t *to, 
+					  struct entry *root)
 {
 	struct entry *cursor = NULL;
 	struct entry *new_entry;
 	int start = to->start;
 	int end = to->end;
-	jsmntok_t *t;
 
-	if (to->type != JSMN_OBJECT)
+	if (to->type != JSMN_ARRAY)
 		return root;
 
-	t = fetch_next_primitive_in_range(dbp, start, end);
-	while (t) {
-		if (primitive_is_radio(dbp, t)) {
-			new_entry = parse_radio(dbp, start, end);
-			if (!new_entry)
-				goto next;
-			if (!root)
-				root = new_entry;
-			if (cursor)
-				cursor->next = new_entry;
-			cursor = new_entry;
-		} else if (primitive_is_dir(dbp, t)) {
-			new_entry = parse_dir(dbp, start, end);
-			if (!new_entry)
-				goto next;
-			if (!root)
-				root = new_entry;
-			if (cursor)
-				cursor->next = new_entry;
-			cursor = new_entry;
-		}
-next:
-		t = fetch_next_primitive_in_range(dbp, start, end);
+	new_entry = fetch_next_entry_in_range(dbp, start, end);
+	while (new_entry) {
+		if (!root)
+			root = new_entry;
+		if (cursor)
+			cursor->next = new_entry;
+		cursor = new_entry;
+		new_entry = fetch_next_entry_in_range(dbp, start, end);
 	}
 
 	return root;
@@ -392,7 +405,7 @@ static struct entry *radio_db_parse(char *db_filename)
 	if (ret)
 		return NULL;
 
-	root = radio_db_parse_object(&parser, fetch_next_token(&parser), NULL);
+	root = radio_db_parse_array(&parser, fetch_next_token(&parser), NULL);
 
 	db_parser_close(&parser);
 

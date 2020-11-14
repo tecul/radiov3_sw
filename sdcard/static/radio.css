@@ -1,0 +1,25 @@
+div.menu {position:absolute; top:0; background-color: #555;text-align: left;padding: 2px;}
+div.menu ul li{
+  margin: 1px 0;
+  padding: 0 5px;
+  cursor: pointer;
+  list-style: none outside none;
+  background-color: #DFDFDF;
+}
+
+form.form-radio {
+    display: table;
+}
+
+div.form-radio {
+    display: table-row;
+}
+
+label, input {
+    display: table-cell;
+    margin-bottom: 10px;
+}
+
+label {
+    padding-right: 10px;
+}
