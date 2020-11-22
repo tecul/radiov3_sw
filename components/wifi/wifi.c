@@ -119,7 +119,7 @@ int wifi_connect_start()
 	strncpy((char *) wifi_config.sta.ssid, ssid, 32);
 	strncpy((char *) wifi_config.sta.password, password, 64);
 	wifi_config.sta.ssid[31] = '\0';
-	wifi_config.sta.ssid[63] = '\0';
+	wifi_config.sta.password[63] = '\0';
 
 	ret = esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config);
 	if (ret)

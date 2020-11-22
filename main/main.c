@@ -19,6 +19,8 @@
 #include "wifi.h"
 #include "audio.h"
 #include "sdcard.h"
+#include "esp_bt.h"
+#include "bluetooth.h"
 
 static const char* TAG = "rv3";
 
@@ -50,7 +52,6 @@ void app_main()
 		ESP_ERROR_CHECK(nvs_flash_erase());
 		ret = nvs_flash_init();
 	}
-	ESP_ERROR_CHECK(ret);
 
 	ESP_LOGI(TAG, "setup sdcard");
 	sdcard_init();
@@ -58,6 +59,11 @@ void app_main()
 	ESP_LOGI(TAG, "setup wifi");
 	wifi_init();
 	wifi_connect_start();
+
+	ESP_LOGI(TAG, "setup bluetooth");
+	ret = bluetooth_init("radiov3");
+	if (ret)
+		ESP_LOGE(TAG, "unable to init bluetooth");
 
 	/* setup audio stack */
 	ESP_LOGI(TAG, "setup audio");

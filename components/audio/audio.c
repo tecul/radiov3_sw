@@ -10,6 +10,10 @@
 #include "fetch_file.h"
 #include "ring.h"
 #include "maddec.h"
+#include "fetch_bt.h"
+#include "esp_log.h"
+
+static const char* TAG = "rv3.audio";
 
 #define MIN(a,b)	((a)<(b)?(a):(b))
 #define MAX(a,b)	((a)>(b)?(a):(b))
@@ -24,6 +28,7 @@ static void *socket_hdl;
 static void *file_hdl;
 static void *buffer_hdl;
 static void *decoder_hdl;
+static void *bluetooth_hdl;
 
 static int is_playing = 0;
 static int is_music_playing = 0;
@@ -94,6 +99,8 @@ void audio_init()
 	assert(socket_hdl);
 	file_hdl = fetch_file_create(buffer_hdl);
 	assert(file_hdl);
+	bluetooth_hdl = fetch_bt_create(stb350_hdl, 0);
+	assert(bluetooth_hdl);
 	decoder_hdl = maddec_create(buffer_hdl, stb350_hdl);
 	assert(decoder_hdl);
 	assert(stb350_init(stb350_hdl) == 0);
@@ -150,6 +157,33 @@ void audio_music_stop()
 	ring_reset(buffer_hdl);
 
 	is_music_playing = 0;
+}
+
+void audio_bluetooth_play(void *hdl, audio_track_info_cb track_info_cb)
+{
+	if (!bluetooth_hdl)
+		return ;
+
+	fetch_bt_start(bluetooth_hdl, hdl, track_info_cb);
+	assert(stb350_start(stb350_hdl) == 0);
+}
+
+void audio_bluetooth_next()
+{
+	ESP_LOGI(TAG,"audio_bluetooth_next %p", bluetooth_hdl);
+	if (!bluetooth_hdl)
+		return ;
+
+	fetch_bt_next(bluetooth_hdl);
+}
+
+void audio_bluetooth_stop()
+{
+	if (!bluetooth_hdl)
+		return ;
+
+	stb350_stop(stb350_hdl);
+	fetch_bt_stop(bluetooth_hdl);
 }
 
 int audio_sound_level_up()
