@@ -100,8 +100,6 @@ void app_main()
 	ESP_LOGI(TAG, "ts calibration setup");
 	calibration_setup(&indev_drv);
 
-	/* init random generator */
-	srand(esp_random());
 	ESP_LOGI(TAG, "main loop");
 	/* main loop */
 	while(1) {

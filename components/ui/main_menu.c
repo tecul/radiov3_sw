@@ -11,6 +11,7 @@
 #include "artist_menu.h"
 #include "playlist_menu.h"
 #include "bt_player.h"
+#include "esp_system.h"
 
 #include "paging_menu.h"
 
@@ -34,9 +35,11 @@ static void main_select_item(void *ctx, char *selected_label, int index)
 		radio_menu_create("/sdcard/radio/radio.db");
 		break;
 	case 1:
+		srand(esp_random());
 		artist_menu_create();
 		break;
 	case 2:
+		srand(esp_random());
 		playlist_menu_create("/sdcard/playlist");
 		break;
 	case 3:
