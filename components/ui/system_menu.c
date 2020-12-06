@@ -8,6 +8,7 @@
 #include "lvgl/lvgl.h"
 #include "wifi.h"
 #include "sdcard.h"
+#include "bluetooth.h"
 #include "esp_sntp.h"
 
 #define container_of(ptr, type, member) ({ \
@@ -25,6 +26,7 @@ struct system_menu {
 	lv_obj_t *user;
 	lv_task_t *task_level;
 	bool is_sntp_done;
+	int toggle;
 };
 
 static void destroy_chained(struct ui_cbs *cbs)
@@ -67,6 +69,19 @@ static void task_level_cb(struct _lv_task_t *task)
 
 	lv_obj_set_hidden(system->wifi_label, !is_wifi_connected);
 	lv_obj_set_hidden(system->sd_card_label, !sdcard_is_present());
+	switch (bluetooth_get_state()) {
+	case BLUETOOTH_DISABLE:
+		lv_obj_set_hidden(system->bluetooth_label, 1);
+		break;
+	case BLUETOOTH_CONNECTED:
+		lv_obj_set_hidden(system->bluetooth_label, 0);
+		break;
+	case BLUETOOTH_DISCOVERABLE:
+		lv_obj_set_hidden(system->bluetooth_label, system->toggle);
+		break;
+	default:
+		assert(0);
+	}
 
 	time(&now);
 	localtime_r(&now, &timeinfo);
@@ -75,6 +90,7 @@ static void task_level_cb(struct _lv_task_t *task)
 	/*snprintf(buf, sizeof(buf), "%02d/%02d/%04d", timeinfo.tm_mday,
 		 timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
 	lv_label_set_text(system->date, buf);*/
+	system->toggle = 1 - system->toggle;
 }
 
 ui_hdl system_menu_create()
@@ -107,7 +123,7 @@ ui_hdl system_menu_create()
 	 */
 	putenv("TZ=CET-1CEST,M3.5.0,M10.5.0/3");
 	tzset();
-	system->task_level = lv_task_create(task_level_cb, 1000, LV_TASK_PRIO_LOW, system);
+	system->task_level = lv_task_create(task_level_cb, 500, LV_TASK_PRIO_LOW, system);
 	assert(system->task_level);
 
 	system->cbs.destroy_chained = destroy_chained;

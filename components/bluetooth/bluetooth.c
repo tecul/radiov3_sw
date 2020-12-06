@@ -363,3 +363,11 @@ int bluetooth_cmd_next()
 
 	return 0;
 }
+
+int bluetooth_get_state()
+{
+	if (!bt.is_enable)
+		return BLUETOOTH_DISABLE;
+
+	return bt.is_connected ? BLUETOOTH_CONNECTED : BLUETOOTH_DISCOVERABLE;
+}
