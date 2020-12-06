@@ -21,6 +21,7 @@
 #include "sdcard.h"
 #include "esp_bt.h"
 #include "bluetooth.h"
+#include "system.h"
 
 static const char* TAG = "rv3";
 
@@ -61,7 +62,7 @@ void app_main()
 	wifi_connect_start();
 
 	ESP_LOGI(TAG, "setup bluetooth");
-	ret = bluetooth_init("radiov3");
+	ret = bluetooth_init(system_get_name());
 	if (ret)
 		ESP_LOGE(TAG, "unable to init bluetooth");
 
