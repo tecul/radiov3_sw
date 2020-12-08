@@ -11,6 +11,7 @@
 
 #include "mongoose.h"
 #include "ring.h"
+#include "system.h"
 
 #define MIN(a,b)	((a) < (b) ? (a) : (b))
 #define RING_SZ_KB	(64)
@@ -305,6 +306,38 @@ internal_error:
 		  "Content-Length: 0\r\n\r\n");
 }
 
+static void handle_get_system(struct mg_connection *nc)
+{
+	mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\n"
+		  "Content-Type: application/json; charset=utf-8"
+		  "\r\nTransfer-Encoding: chunked\r\n\r\n");
+
+	mg_printf_http_chunk(nc, "{\"name\": \"%s\"}", system_get_name());
+
+	mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
+}
+
+static void handle_set_system(struct mg_connection *nc, struct http_message *hm)
+{
+	char data[64];
+	int ret;
+
+	ret = mg_get_http_var(&hm->body, "name", data, sizeof(data));
+	if (ret > 0) {
+		ret = system_set_name(data);
+		if (ret)
+			goto internal_error;
+	}
+
+	mg_printf(nc, "%s", "HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n");
+
+	return ;
+
+internal_error:
+	mg_printf(nc, "%s", "HTTP/1.0 500 Internal Server Error\r\n"
+		  "Content-Length: 0\r\n\r\n");
+}
+
 static void ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
 	static const struct mg_str dir_api_prefix = MG_MK_STR("/api/v1/dir");
@@ -339,6 +372,13 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 				handle_cb(nc, hm, &cmd, delete_file, 1);
 			else if (mg_strcmp(hm->method, s_put_method) == 0)
 				handle_cb(nc, hm, &cmd, rename_dir_file, 1);
+			else
+				goto not_found;
+		} else if (mg_vcmp(&hm->uri, "/api/v1/system") == 0) {
+			if (mg_strcmp(hm->method, s_get_method) == 0)
+				handle_get_system(nc);
+			else if (mg_strcmp(hm->method, s_post_method) == 0)
+				handle_set_system(nc, hm);
 			else
 				goto not_found;
 		} else

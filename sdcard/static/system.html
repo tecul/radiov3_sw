@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<HTML>
+ <HEAD>
+  <TITLE> System </TITLE>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <script type="text/javascript" src="jquery-3.5.1.min.js"></script>
+  <script type="text/javascript" src="system.js"></script>
+ </HEAD>
+<BODY>
+  <form id="form_name" action="/api/v1/system" method="post">
+    <label for="name">Device name:</label>
+    <input type="text" id="name" name="name" onkeypress="return event.keyCode != 13;">
+    <button id="button_name" type="button">Update device name</button>
+  </form>
+</BODY>
+</HTML>
