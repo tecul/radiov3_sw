@@ -4,14 +4,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "esp_log.h"
 
 #include "ring.h"
 
 #define BUFFER_LEN	512
+
+static const char* TAG = "rv3.fetch_file";
 
 struct fetch_file {
 	void *buffer_hdl;
@@ -34,8 +38,10 @@ static void fetch_file_task(void *arg)
 
 	while (self->is_active) {
 		ret = read(fd, self->buffer, BUFFER_LEN);
-		if (ret <= 0)
+		if (ret <= 0) {
+			ESP_LOGE(TAG, "read error %d / %d\n", ret, errno);
 			goto exit;
+		}
 retry:
 		ret = ring_push(self->buffer_hdl, ret, self->buffer);
 		/* test if we got a timeout */

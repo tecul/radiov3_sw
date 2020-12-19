@@ -73,8 +73,8 @@ static void fetch_socket_radio_task(void *arg)
 	while (self->is_active) {
 		res = read(s, readBuffer, 1024);
 		if (res <= 0) {
-			ESP_LOGE(TAG, "read error %d\n", res);
-			exit(-1);
+			ESP_LOGE(TAG, "read error %d / %d\n", res, errno);
+			vTaskDelay(100 / portTICK_PERIOD_MS);
 		}
 		len = res;
 retry:
