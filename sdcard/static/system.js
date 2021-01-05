@@ -8,6 +8,8 @@ $(document).ready(function() {
 			console.log("success");
 			console.log(response);
 			$('#name').val(response['name']);
+			$('#sdcard_total').val(response['sdcard']['total']);
+			$('#sdcard_free').val(response['sdcard']['free']);
 		},
 		error : function() {
 			console.log("error");

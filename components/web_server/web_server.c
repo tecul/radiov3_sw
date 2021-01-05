@@ -308,13 +308,31 @@ internal_error:
 
 static void handle_get_system(struct mg_connection *nc)
 {
+	uint64_t total_size;
+	uint64_t free_size;
+	int ret;
+
+	ret = system_get_sdcard_info(&total_size, &free_size);
+	if (ret)
+		goto error;
+
 	mg_printf(nc, "%s", "HTTP/1.1 200 OK\r\n"
 		  "Content-Type: application/json; charset=utf-8"
 		  "\r\nTransfer-Encoding: chunked\r\n\r\n");
 
-	mg_printf_http_chunk(nc, "{\"name\": \"%s\"}", system_get_name());
+	mg_printf_http_chunk(nc, "{");
+	mg_printf_http_chunk(nc, "\"name\": \"%s\",", system_get_name());
+	mg_printf_http_chunk(nc, "\"sdcard\": {\"total\": %lld, \"free\": %lld}",
+			     total_size, free_size);
+	mg_printf_http_chunk(nc, "}");
 
 	mg_send_http_chunk(nc, "", 0); /* Send empty chunk, the end of response */
+
+	return;
+
+error:
+	mg_printf(nc, "%s", "HTTP/1.0 500 Internal Server Error\r\n"
+		  "Content-Length: 0\r\n\r\n");
 }
 
 static void handle_set_system(struct mg_connection *nc, struct http_message *hm)

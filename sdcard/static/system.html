@@ -10,6 +10,13 @@
   <form id="form_name" action="/api/v1/system" method="post">
     <label for="name">Device name:</label>
     <input type="text" id="name" name="name" onkeypress="return event.keyCode != 13;">
+    <br>
+    <label for="sdcard_total">Sdcard total bytes:</label>
+    <input type="text" id="sdcard_total" name="sdcard_total" readonly>
+    <br>
+    <label for="sdcard_free">Sdcard free bytes:</label>
+    <input type="text" id="sdcard_free" name="sdcard_free" readonly>
+    <br>
     <button id="button_name" type="button">Update device name</button>
   </form>
 </BODY>

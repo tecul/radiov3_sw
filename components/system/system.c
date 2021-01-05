@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "ff.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
@@ -109,4 +110,27 @@ int system_set_name(char *name)
 	nvs_close(hdl);
 
 	return err;
+}
+
+int system_get_sdcard_info(uint64_t *total_size, uint64_t *free_size)
+{
+	uint64_t total_sectors;
+	uint64_t free_sectors;
+	FATFS *fs;
+	DWORD fre_clust;
+	int ret;
+
+	ret = f_getfree("/sdcard/", &fre_clust, &fs);
+	if (ret) {
+		ESP_LOGE(TAG, "f_getfree => %d\n", ret);
+		return ret;
+	}
+
+	total_sectors = (fs->n_fatent - 2) * fs->csize;
+	free_sectors = fre_clust * fs->csize;
+
+	*total_size = total_sectors * fs->ssize;
+	*free_size = free_sectors * fs->ssize;
+
+	return 0;
 }
