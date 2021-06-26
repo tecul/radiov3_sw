@@ -138,6 +138,7 @@ void wifi_scan_start(void (*_wifi_scan_done_cb)(void *), void *arg)
 
 	wifi_scan_done_cb = _wifi_scan_done_cb;
 	wifi_scan_done_cb_arg = arg;
+	ESP_ERROR_CHECK( esp_wifi_disconnect() );
 	ESP_ERROR_CHECK( esp_wifi_scan_start(&scan_config, false) );
 }
 
