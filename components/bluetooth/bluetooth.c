@@ -52,13 +52,13 @@ static void bt_app_a2d_conn_cb(struct a2d_conn_stat_param *conn_stat)
 	ESP_LOGI(TAG, "state = %d", conn_stat->state);
 	if (conn_stat->state == ESP_A2D_CONNECTION_STATE_DISCONNECTED) {
 		if (bt.is_enable)
-			esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+			esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
 		bt.is_connected = 0;
 	}
 	else if (conn_stat->state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
 		bt.is_connected = 1;
 		memcpy(&bt.connected_device, &conn_stat->remote_bda, sizeof(esp_bd_addr_t));
-		esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_NONE);
+		esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
 	}
 }
 
@@ -185,7 +185,7 @@ static void bt_app_rc_ct_metadata_cb(struct avrc_ct_meta_rsp_param *meta_rsp)
 static void bt_app_rc_ct_notify_cb(struct avrc_ct_change_notify_param *change_ntf)
 {
 	uint8_t event_id = change_ntf->event_id;
-	ESP_LOGD(TAG, "avrc notification %d %d", change_ntf->event_id, change_ntf->event_parameter);
+	ESP_LOGD(TAG, "avrc notification %d", change_ntf->event_id);
 
 	switch (event_id) {
 	case ESP_AVRC_RN_TRACK_CHANGE:
@@ -258,6 +258,10 @@ int bluetooth_init(char *name)
 	if (ret)
 		goto deinit;
 
+	ret = esp_avrc_ct_init();
+	if (ret)
+		goto deinit_sink;
+
 	ret = esp_a2d_register_callback(bt_app_a2d_cb);
 	if (ret)
 		goto deinit;
@@ -269,10 +273,6 @@ int bluetooth_init(char *name)
 	ret = esp_a2d_sink_init();
 	if (ret)
 		goto deinit;
-
-	ret = esp_avrc_ct_init();
-	if (ret)
-		goto deinit_sink;
 
 	ret = esp_avrc_ct_register_callback(bt_app_rc_ct_cb);
 	if (ret)
@@ -314,7 +314,7 @@ int bluetooth_enable(bt_audio_cfg_cb audio_cfg_cb, bt_audio_data_cb audio_data_c
 	bt.track_info_cb = track_info_cb;
 	bt.is_enable = 1;
 	ESP_LOGI(TAG, "set ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE");
-	esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_CONNECTABLE_DISCOVERABLE);
+	esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
 
 	return 0;
 }
@@ -327,7 +327,7 @@ int bluetooth_disable()
 		return 0;
 
 	bt.is_enable = 0;
-	esp_bt_gap_set_scan_mode(ESP_BT_SCAN_MODE_NONE);
+	esp_bt_gap_set_scan_mode(ESP_BT_NON_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
 	if (bt.is_connected) {
 		ret = esp_a2d_sink_disconnect(bt.connected_device);
 		if (ret) {

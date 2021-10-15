@@ -4,7 +4,7 @@
 #include <dirent.h>
 #include <string.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "esp_log.h"
 
 #include "paging_menu.h"

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "esp_log.h"
 #include "settings.h"
 #include "radio_menu.h"

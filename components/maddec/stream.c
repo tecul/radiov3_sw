@@ -19,6 +19,7 @@
  * $Id: stream.c,v 1.12 2004/02/05 09:02:39 rob Exp $
  */
 
+#define HAVE_CONFIG_H
 # ifdef HAVE_CONFIG_H
 #  include "config.h"
 # endif

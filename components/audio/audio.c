@@ -59,7 +59,7 @@ static int init_i2s0()
 		.sample_rate = 44100,
 		.bits_per_sample = 16,
 		.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
-		.communication_format = I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB,
+		.communication_format = I2S_COMM_FORMAT_STAND_I2S,
 		.dma_buf_count = 8,
 		.dma_buf_len = I2S_DMA_SAMPLE_BUFFER_SZ,
 		.use_apll = true,

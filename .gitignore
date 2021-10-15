@@ -3,3 +3,5 @@ setup.csh
 sdkconfig.old
 TODO
 BUGS
+.cache
+*.pyc

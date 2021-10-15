@@ -2,12 +2,13 @@
 
 #include <assert.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "esp_log.h"
 
 #include "audio.h"
 
 #include "system_menu.h"
+#include "fonts.h"
 
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
@@ -30,7 +31,6 @@ struct radio_player {
 	lv_obj_t *msg_label;
 	lv_obj_t *bar_level;
 	lv_obj_t *sound_level;
-	lv_style_t label_style;
 	lv_task_t *task_level;
 };
 
@@ -146,9 +146,6 @@ static void radio_player_screen(struct radio_player *player, const char *radio_l
 
 	setup_new_screen(player);
 
-	lv_style_copy(&player->label_style, &lv_style_plain);
-	player->label_style.text.font = &lv_font_roboto_28;
-
 	for (i = 0; i < RADIO_PLAYER_NB; i++) {
 		player->btn[i] = lv_btn_create(player->scr, NULL);
 		assert(player->btn[i]);
@@ -162,7 +159,7 @@ static void radio_player_screen(struct radio_player *player, const char *radio_l
 
 	player->msg_label = lv_label_create(player->scr, NULL);
 	assert(player->msg_label);
-	lv_label_set_style(player->msg_label, LV_LABEL_STYLE_MAIN, &player->label_style);
+	lv_obj_set_style_local_text_font(player->msg_label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, &lv_font_rv3_24);
 	lv_obj_align(player->msg_label, NULL, LV_ALIGN_CENTER, 0, 0);
 	lv_obj_set_auto_realign(player->msg_label, true);
 	lv_label_set_align(player->msg_label, LV_LABEL_ALIGN_CENTER);
@@ -175,14 +172,14 @@ static void radio_player_screen(struct radio_player *player, const char *radio_l
 	lv_bar_set_range(player->bar_level, 0, 100);
 	lv_obj_set_size(player->bar_level, 15, 225);
 	lv_obj_set_pos(player->bar_level, 0, 15);
-	lv_bar_set_style(player->bar_level, LV_BAR_STYLE_BG, &lv_style_transp);
+	//lv_bar_set_style(player->bar_level, LV_BAR_STYLE_BG, &lv_style_transp);
 
 	player->sound_level = lv_bar_create(player->scr, NULL);
 	assert(player->sound_level);
 	lv_bar_set_range(player->sound_level, 0, audio_sound_get_max_level());
 	lv_obj_set_size(player->sound_level, 15, 225);
 	lv_obj_set_pos(player->sound_level, 305, 15);
-	lv_bar_set_style(player->sound_level, LV_BAR_STYLE_BG, &lv_style_transp);
+	//lv_bar_set_style(player->sound_level, LV_BAR_STYLE_BG, &lv_style_transp);
 	lv_bar_set_value(player->sound_level, audio_sound_get_level(), LV_ANIM_OFF);
 
 	player->task_level = lv_task_create(task_level_cb, 250, LV_TASK_PRIO_LOW, NULL);

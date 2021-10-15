@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "esp_log.h"
 
 #include "system_menu.h"
@@ -53,7 +53,7 @@ static inline struct paging_menu *get_paging_menu(lv_obj_t *btn)
 static void set_system_info(struct paging_menu *menu)
 {
 	int page_nb_max = (menu->item_nb - 1) / 3;
-	char system_page_info[16];
+	char system_page_info[32];
 
 	snprintf(system_page_info, sizeof(system_page_info), "%2d / %2d", menu->page_nb + 1, page_nb_max + 1);
 	system_menu_set_user_label(system_page_info);

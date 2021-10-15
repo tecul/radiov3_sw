@@ -3,6 +3,7 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
+#include "driver/sdmmc_host.h"
 
 static const char *TAG = "rv3.sdcard";
 

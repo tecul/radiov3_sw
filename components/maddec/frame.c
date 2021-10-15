@@ -19,6 +19,7 @@
  * $Id: frame.c,v 1.29 2004/02/04 22:59:19 rob Exp $
  */
 
+#define HAVE_CONFIG_H
 # ifdef HAVE_CONFIG_H
 #  include "config.h"
 # endif

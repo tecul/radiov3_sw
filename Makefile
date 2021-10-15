@@ -1,9 +1,11 @@
-#
-# This is a project Makefile. It is assumed the directory this Makefile resides in is a
-# project subdirectory.
-#
+all:
+	idf.py build
 
-PROJECT_NAME := radiov3
+clean:
+	idf.py clean
 
-include $(IDF_PATH)/make/project.mk
+flash:
+	idf.py flash -b 2000000
 
+monitor:
+	idf.py monitor

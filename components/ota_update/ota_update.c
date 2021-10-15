@@ -188,20 +188,20 @@ static void ota_update_task(void *arg)
 	vTaskDelay(500 / portTICK_PERIOD_MS);
 	if (is_new_firmware_available()) {
 		ESP_LOGI(TAG, "start update");
-		lv_mbox_set_text(mbox, "Updating ...");
+		lv_msgbox_set_text(mbox, "Updating ...");
 		ota_apply_update();
-		lv_mbox_set_text(mbox, "Will reboot in 3 seconds ...");
+		lv_msgbox_set_text(mbox, "Will reboot in 3 seconds ...");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		lv_mbox_set_text(mbox, "Will reboot in 2 seconds ...");
+		lv_msgbox_set_text(mbox, "Will reboot in 2 seconds ...");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		lv_mbox_set_text(mbox, "Will reboot in 1 seconds ...");
+		lv_msgbox_set_text(mbox, "Will reboot in 1 seconds ...");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		lv_mbox_set_text(mbox, "Will reboot in 0 seconds ...");
+		lv_msgbox_set_text(mbox, "Will reboot in 0 seconds ...");
 		esp_restart();
 	}
-	lv_mbox_set_text(mbox, "Fw is up to date");
+	lv_msgbox_set_text(mbox, "Fw is up to date");
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
-	lv_mbox_start_auto_close(mbox, 0);
+	lv_msgbox_start_auto_close(mbox, 0);
 	vTaskDelete(NULL);
 }
 

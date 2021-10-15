@@ -3,13 +3,14 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "esp_log.h"
 
 #include "audio.h"
 #include "playlist.h"
 
 #include "system_menu.h"
+#include "fonts.h"
 
 static const char* TAG = "rv3.music_player";
 
@@ -44,7 +45,6 @@ struct music_player {
 	lv_obj_t *msg_label;
 	lv_obj_t *bar_level;
 	lv_obj_t *sound_level;
-	lv_style_t label_style;
 	lv_task_t *task_level;
 	void *playlist_hdl;
 	enum music_player_state state;
@@ -149,7 +149,7 @@ static int is_random_mode(struct music_player *player)
 {
 	lv_btn_state_t st = lv_btn_get_state(player->btn[MUSIC_PLAYER_RANDOM]);
 
-	return LV_BTN_STATE_REL == st;
+	return LV_BTN_STATE_RELEASED == st;
 }
 
 static void start_next_song(struct music_player *player)
@@ -230,9 +230,6 @@ static void music_player_screen(struct music_player *player)
 
 	setup_new_screen(player);
 
-	lv_style_copy(&player->label_style, &lv_style_plain);
-	player->label_style.text.font = &lv_font_roboto_28;
-
 	for (i = 0; i < MUSIC_PLAYER_NB; i++) {
 		player->btn[i] = lv_btn_create(player->scr, NULL);
 		assert(player->btn[i]);
@@ -243,12 +240,12 @@ static void music_player_screen(struct music_player *player)
 		lv_label_set_text(player->label[i], labels[i]);
 		lv_obj_set_event_cb(player->btn[i], music_player_event_cb);
 	}
-	lv_btn_set_toggle(player->btn[MUSIC_PLAYER_RANDOM], true);
-	lv_btn_set_state(player->btn[MUSIC_PLAYER_RANDOM], LV_BTN_STATE_TGL_REL);
+	lv_btn_set_checkable(player->btn[MUSIC_PLAYER_RANDOM], true);
+	lv_btn_set_state(player->btn[MUSIC_PLAYER_RANDOM], LV_BTN_STATE_RELEASED);
 
 	player->msg_label = lv_label_create(player->scr, NULL);
 	assert(player->msg_label);
-	lv_label_set_style(player->msg_label, LV_LABEL_STYLE_MAIN, &player->label_style);
+	lv_obj_set_style_local_text_font(player->msg_label, LV_OBJ_PART_MAIN, LV_STATE_DEFAULT, &lv_font_rv3_24);
 	lv_obj_align(player->msg_label, NULL, LV_ALIGN_CENTER, 0, 0);
 	lv_obj_set_auto_realign(player->msg_label, true);
 	lv_label_set_align(player->msg_label, LV_LABEL_ALIGN_CENTER);
@@ -260,14 +257,14 @@ static void music_player_screen(struct music_player *player)
 	lv_bar_set_range(player->bar_level, 0, 100);
 	lv_obj_set_size(player->bar_level, 15, 225);
 	lv_obj_set_pos(player->bar_level, 0, 15);
-	lv_bar_set_style(player->bar_level, LV_BAR_STYLE_BG, &lv_style_transp);
+	//lv_bar_set_style(player->bar_level, LV_BAR_STYLE_BG, &lv_style_transp);
 
 	player->sound_level = lv_bar_create(player->scr, NULL);
 	assert(player->sound_level);
 	lv_bar_set_range(player->sound_level, 0, audio_sound_get_max_level());
 	lv_obj_set_size(player->sound_level, 15, 225);
 	lv_obj_set_pos(player->sound_level, 305, 15);
-	lv_bar_set_style(player->sound_level, LV_BAR_STYLE_BG, &lv_style_transp);
+	//lv_bar_set_style(player->sound_level, LV_BAR_STYLE_BG, &lv_style_transp);
 	lv_bar_set_value(player->sound_level, audio_sound_get_level(), LV_ANIM_OFF);
 
 	player->task_level = lv_task_create(task_level_cb, 250, LV_TASK_PRIO_LOW, NULL);

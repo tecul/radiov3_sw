@@ -19,6 +19,7 @@
  * $Id: huffman.c,v 1.10 2004/01/23 09:41:32 rob Exp $
  */
 
+#define HAVE_CONFIG_H
 # ifdef HAVE_CONFIG_H
 #  include "config.h"
 # endif

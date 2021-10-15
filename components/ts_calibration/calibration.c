@@ -5,7 +5,9 @@
 #include <assert.h>
 #include <stdarg.h>
 
+#include "lv_core/lv_obj_style_dec.h"
 #include "lvgl.h"
+#include "lvgl_helpers.h"
 #include "xpt2046.h"
 
 #include "nvs_flash.h"
@@ -34,7 +36,6 @@ struct calib {
 	lv_obj_t *btn;
 	lv_obj_t *label_msg;
 	lv_obj_t *circle;
-	lv_style_t style_circ;
 	enum calib_state state;
 	int counter;
 	lv_point_t avr[TOUCH_NUMBER];
@@ -318,25 +319,21 @@ static void calibration_start_internal()
 	calib->vres = lv_disp_get_ver_res(NULL);
 	lv_obj_set_size(calib->scr, calib->hres, calib->vres);
 
-	calib->btn = lv_btn_create(calib->scr, NULL);
+	calib->btn = lv_obj_create(calib->scr, NULL);
 	assert(calib->btn);
 	lv_obj_set_size(calib->btn, calib->hres, calib->vres);
-	lv_btn_set_style(calib->btn, LV_BTN_STYLE_REL, &lv_style_transp);
-	lv_btn_set_style(calib->btn, LV_BTN_STYLE_PR, &lv_style_transp);
 	lv_obj_set_event_cb(calib->btn, btn_event_cb);
-	lv_btn_set_layout(calib->btn, LV_LAYOUT_OFF);
 
-	calib->label_msg = lv_label_create(lv_disp_get_scr_act(NULL), NULL);
+	calib->label_msg = lv_label_create(calib->scr, NULL);
 	assert(calib->label_msg);
 	lv_label_set_align(calib->label_msg, LV_LABEL_ALIGN_CENTER);
 	printf_label(calib, "Click the circle in\nupper left-hand corner\n%u left", TOUCH_NUMBER);
 
-	lv_style_copy(&calib->style_circ, &lv_style_pretty_color);
-	calib->style_circ.body.radius = LV_RADIUS_CIRCLE;
-	calib->circle = lv_obj_create(lv_disp_get_scr_act(NULL), NULL);
+	calib->circle = lv_obj_create(calib->scr, NULL);
+	lv_obj_set_style_local_bg_color(calib->circle, LV_BTN_PART_MAIN, LV_STATE_DEFAULT, LV_COLOR_BLACK);
+	lv_obj_set_style_local_radius(calib->circle, LV_BTN_PART_MAIN, LV_STATE_DEFAULT, LV_RADIUS_CIRCLE);
 	lv_obj_set_size(calib->circle, CIRCLE_SIZE, CIRCLE_SIZE);
 	assert(calib->circle);
-	lv_obj_set_style(calib->circle, &calib->style_circ);
 	lv_obj_set_click(calib->circle, false);
 	lv_obj_set_pos(calib->circle, CIRCLE_OFFSET, CIRCLE_OFFSET);
 

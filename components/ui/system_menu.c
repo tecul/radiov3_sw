@@ -5,7 +5,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "wifi.h"
 #include "sdcard.h"
 #include "bluetooth.h"

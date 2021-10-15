@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "esp_log.h"
 
 #include "radio_player.h"

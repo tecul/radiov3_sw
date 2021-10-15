@@ -2,7 +2,12 @@
 #define __BLUETOOTH__ 1
 
 #include <stdint.h>
+/* FIXME : tmp until webring back audio stack */
+#if 0
 #include "audio.h"
+#else
+typedef void (*audio_track_info_cb)(void *hdl, char *track_title);
+#endif
 
 typedef void (*bt_audio_cfg_cb)(int sample_rate);
 typedef void (*bt_audio_data_cb)(const uint8_t *data, uint32_t len);

@@ -1,0 +1,9 @@
+[submodule "esp-idf"]
+	path = esp-idf
+	url = git@github.com:tecul/esp-idf.git
+[submodule "components/lvgl"]
+	path = components/lvgl
+	url = https://github.com/tecul/lvgl.git
+[submodule "components/lvgl_esp32_drivers"]
+	path = components/lvgl_esp32_drivers
+	url = https://github.com/tecul/lvgl_esp32_drivers.git

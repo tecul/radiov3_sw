@@ -7,7 +7,7 @@
 #include "freertos/event_groups.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
-#include "esp_event_loop.h"
+#include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 
@@ -16,40 +16,51 @@
 
 static const char *TAG = "rv3.wifi";
 
-const int WIFI_CONNECTED_BIT = BIT0;
-static EventGroupHandle_t wifi_event_group;
-static ip4_addr_t ip;
+static esp_ip4_addr_t ip;
+static char ip_addr[32];
 static void (*wifi_scan_done_cb)(void *);
 static void *wifi_scan_done_cb_arg;
 static int is_wifi_init_done;
+static bool is_connected;
 
-static esp_err_t event_handler(void *ctx, system_event_t *event)
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,
+				int32_t event_id, void* event_data)
 {
-	switch(event->event_id) {
-	case SYSTEM_EVENT_STA_START:
+	switch (event_id) {
+	case WIFI_EVENT_STA_START:
 		ESP_LOGI(TAG, "SYSTEM_EVENT_STA_START");
 		break;
-	case SYSTEM_EVENT_SCAN_DONE:
+	case WIFI_EVENT_SCAN_DONE:
 		ESP_LOGI(TAG, "SYSTEM_EVENT_SCAN_DONE");
 		wifi_scan_done_cb(wifi_scan_done_cb_arg);
 		break;
-	case SYSTEM_EVENT_STA_GOT_IP:
-		ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP: %s",
-			 ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-		ip = event->event_info.got_ip.ip_info.ip;
-		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
-		break;
-	case SYSTEM_EVENT_STA_DISCONNECTED:
+	case WIFI_EVENT_STA_DISCONNECTED:
 		ESP_LOGI(TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
-		xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+		is_connected = false;
 		esp_wifi_connect();
 		break;
 	default:
-		ESP_LOGI(TAG, "unsupported event_handler %d\n", event->event_id);
+		ESP_LOGI(TAG, "unsupported wifi event %d\n", event_id);
 		break;
 	}
+}
 
-	return ESP_OK;
+static void ip_event_handler(void* arg, esp_event_base_t event_base,
+			     int32_t event_id, void* event_data)
+{
+	ip_event_got_ip_t *got_ip = event_data;
+
+	switch (event_id) {
+	case IP_EVENT_STA_GOT_IP:
+		ip = got_ip->ip_info.ip;
+		esp_ip4addr_ntoa(&ip, ip_addr, sizeof(ip_addr));
+		is_connected = true;
+		ESP_LOGI(TAG, "SYSTEM_EVENT_STA_GOT_IP %s", ip_addr);
+		break;
+	default:
+		ESP_LOGI(TAG, "unsupported ip event %d\n", event_id);
+		break;
+	}
 }
 
 static esp_err_t read_wifi_credentials(char *ssid, char *password)
@@ -94,9 +105,13 @@ void wifi_init()
 
 	esp_log_level_set("wifi", ESP_LOG_INFO);
 
-	wifi_event_group = xEventGroupCreate();
-	tcpip_adapter_init();
-	ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
+	esp_netif_init();
+	ESP_ERROR_CHECK(esp_event_loop_create_default());
+	esp_netif_create_default_wifi_sta();
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
+							    wifi_event_handler, NULL, NULL));
+	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID,
+							    ip_event_handler, NULL, NULL));
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
 	ESP_ERROR_CHECK(esp_wifi_start() );
@@ -138,7 +153,7 @@ void wifi_scan_start(void (*_wifi_scan_done_cb)(void *), void *arg)
 
 	wifi_scan_done_cb = _wifi_scan_done_cb;
 	wifi_scan_done_cb_arg = arg;
-	ESP_ERROR_CHECK( esp_wifi_disconnect() );
+	//ESP_ERROR_CHECK( esp_wifi_disconnect() );
 	ESP_ERROR_CHECK( esp_wifi_scan_start(&scan_config, false) );
 }
 
@@ -175,7 +190,7 @@ cleanup:
 
 int wifi_is_connected()
 {
-	return xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT;
+	return is_connected;
 }
 
 char *wifi_get_ip()
@@ -183,5 +198,5 @@ char *wifi_get_ip()
 	if (!wifi_is_connected())
 		return NULL;
 
-	return ip4addr_ntoa(&ip);
+	return ip_addr;
 }

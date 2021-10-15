@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "lvgl/lvgl.h"
+#include "lvgl.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
@@ -99,15 +99,15 @@ static void kb_event_cb(lv_obj_t *btn, lv_event_t event)
 		lv_label_set_text(wifi->kb_label[KB_CHAR], wifi->kb_current);
 		break;
 	case KB_CHAR:
-		lv_ta_add_char(wifi->ta, wifi->kb_current[0]);
+		lv_textarea_add_char(wifi->ta, wifi->kb_current[0]);
 		break;
 	case KB_DELETE:
-		lv_ta_del_char(wifi->ta);
+		lv_textarea_del_char(wifi->ta);
 		break;
 	case KB_DONE:
 		printf("ssid = %s\n", wifi->ssid);
-		printf("passwd = %s\n", lv_ta_get_text(wifi->ta));
-		ret = wifi_set_credentials(wifi->ssid, (char *) lv_ta_get_text(wifi->ta));
+		printf("passwd = %s\n", lv_textarea_get_text(wifi->ta));
+		ret = wifi_set_credentials(wifi->ssid, (char *) lv_textarea_get_text(wifi->ta));
 		if (!ret)
 			wifi_connect_start();
 
@@ -159,11 +159,11 @@ static void setup_pwd_screen(struct wifi_setting_menu *wifi)
 
 	setup_new_screen(wifi);
 
-	wifi->ta = lv_ta_create(wifi->scr, NULL);
-	lv_ta_set_one_line(wifi->ta, true);
+	wifi->ta = lv_textarea_create(wifi->scr, NULL);
+	lv_textarea_set_one_line(wifi->ta, true);
 	lv_obj_align(wifi->ta, NULL, LV_ALIGN_IN_TOP_MID, 0, 10);
 	lv_obj_set_y(wifi->ta, 24);
-	lv_ta_set_text(wifi->ta, "");
+	lv_textarea_set_text(wifi->ta, "");
 
 	wifi->kb_current[0] = labels[KB_CHAR][0];
 	wifi->kb_current[1] = '\0';

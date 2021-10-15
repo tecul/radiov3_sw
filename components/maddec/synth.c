@@ -19,6 +19,7 @@
  * $Id: synth.c,v 1.25 2004/01/23 09:41:33 rob Exp $
  */
 
+#define HAVE_CONFIG_H
 # ifdef HAVE_CONFIG_H
 #  include "config.h"
 # endif

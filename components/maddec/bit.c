@@ -19,6 +19,7 @@
  * $Id: bit.c,v 1.12 2004/01/23 09:41:32 rob Exp $
  */
 
+#define HAVE_CONFIG_H
 # ifdef HAVE_CONFIG_H
 #  include "config.h"
 # endif
@@ -213,8 +214,10 @@ unsigned short mad_bit_crc(struct mad_bitptr bitptr, unsigned int len,
   switch (len / 8) {
   case 3: crc = (crc << 8) ^
 	    crc_table[((crc >> 8) ^ mad_bit_read(&bitptr, 8)) & 0xff];
+      /* FALLTHRU */
   case 2: crc = (crc << 8) ^
 	    crc_table[((crc >> 8) ^ mad_bit_read(&bitptr, 8)) & 0xff];
+      /* FALLTHRU */
   case 1: crc = (crc << 8) ^
 	    crc_table[((crc >> 8) ^ mad_bit_read(&bitptr, 8)) & 0xff];
 
