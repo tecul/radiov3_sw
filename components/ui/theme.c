@@ -58,6 +58,11 @@ static void init_styles()
 	lv_style_set_bg_grad_color(&styles.btn, LV_STATE_PRESSED, lv_color_make(0x10, 0x26, 0x3c));
 	lv_style_set_bg_grad_dir(&styles.btn, LV_STATE_PRESSED, LV_GRAD_DIR_VER);
 	lv_style_set_text_color(&styles.btn, LV_STATE_PRESSED, lv_color_make(0xa4, 0xb5, 0xc6));
+	lv_style_set_radius(&styles.btn, LV_STATE_CHECKED, 5);
+	lv_style_set_bg_color(&styles.btn, LV_STATE_CHECKED, lv_color_make(0x33, 0x62, 0x94));
+	lv_style_set_bg_grad_color(&styles.btn, LV_STATE_CHECKED, lv_color_make(0x10, 0x26, 0x3c));
+	lv_style_set_bg_grad_dir(&styles.btn, LV_STATE_CHECKED, LV_GRAD_DIR_VER);
+	lv_style_set_text_color(&styles.btn, LV_STATE_CHECKED, lv_color_make(0xa4, 0xb5, 0xc6));
 
 	/* border */
 	lv_style_reset(&styles.border);

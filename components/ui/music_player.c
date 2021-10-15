@@ -241,7 +241,7 @@ static void music_player_screen(struct music_player *player)
 		lv_obj_set_event_cb(player->btn[i], music_player_event_cb);
 	}
 	lv_btn_set_checkable(player->btn[MUSIC_PLAYER_RANDOM], true);
-	lv_btn_set_state(player->btn[MUSIC_PLAYER_RANDOM], LV_BTN_STATE_RELEASED);
+	lv_btn_set_state(player->btn[MUSIC_PLAYER_RANDOM], LV_BTN_STATE_CHECKED_RELEASED);
 
 	player->msg_label = lv_label_create(player->scr, NULL);
 	assert(player->msg_label);
