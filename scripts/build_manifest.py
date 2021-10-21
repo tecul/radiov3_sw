@@ -21,5 +21,5 @@ def main(root_dir, version, filename):
 	f.close()
 
 if __name__ == '__main__':
-	version = subprocess.check_output(['git', 'describe', '--abbrev=8', "--long"])
+	version = subprocess.check_output(['git', 'describe', '--abbrev=8', "--long", "--always"])
 	main(os.getcwd(), version.strip().decode("utf-8")[-8:], "build/ota_matifest.txt")

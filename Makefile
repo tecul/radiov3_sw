@@ -1,6 +1,8 @@
 all:
 	idf.py build
-	python3 scripts/build_manifest.py
+	pwd
+	git describe --abbrev=8 --long --always
+	python scripts/build_manifest.py
 
 clean:
 	idf.py clean
