@@ -20,3 +20,4 @@ jobs:
           prerelease: false
           files: |
             build/radiov3.bin
+            build/ota_matifest.txt
