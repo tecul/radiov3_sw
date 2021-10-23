@@ -1,5 +1,17 @@
 #include "downloader.h"
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <libgen.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "esp_http_client.h"
 #include "esp_log.h"
 
@@ -33,6 +45,84 @@ struct cb_info {
 	on_data_cb cb;
 	void *cb_ctx;
 };
+
+struct cb_file_ctx {
+	int fd;
+};
+
+static int mkdir_p(const char *path)
+{
+	const size_t len = strlen(path);
+	char _path[PATH_MAX];
+	char *p;
+
+	errno = 0;
+
+	/* Copy string so its mutable */
+	if (len > sizeof(_path)-1) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+	strcpy(_path, path);
+
+	/* Iterate the string */
+	for (p = _path + 1; *p; p++) {
+		if (*p == '/') {
+			/* Temporarily truncate */
+			*p = '\0';
+
+			if (mkdir(_path, S_IRWXU) != 0) {
+				if (errno != EEXIST)
+					return -1;
+			}
+
+			*p = '/';
+		}
+	}
+
+	if (mkdir(_path, S_IRWXU) != 0) {
+		if (errno != EEXIST)
+			return -1;
+	}
+
+	return 0;
+}
+
+char *dirname(char *path)
+{
+	int len = strlen(path);
+	int i;
+
+	for (i = len - 1; i >= 0; i--) {
+		if (path[i] != '/')
+			continue;
+		path[i] = '\0';
+		break;
+	}
+
+	return path;
+}
+
+static int create_directories(char *fullpath)
+{
+	char *dirpath = strdup(fullpath);
+	int ret;
+
+	ret = mkdir_p(dirname(dirpath));
+	free(dirpath);
+
+	return ret;
+}
+
+static int file_cb(void *data, int data_len, void *cb_ctx)
+{
+	struct cb_file_ctx *ctx = cb_ctx;
+	int ret;
+
+	ret = write(ctx->fd, data, data_len);
+
+	return ret == data_len ? 0 : 1;
+}
 
 static esp_err_t http_event_handle(esp_http_client_event_t *evt)
 {
@@ -101,6 +191,32 @@ int downloader_generic(char *url, on_data_cb cb, void *cb_ctx)
 		ESP_LOGE(TAG, "unable to perform http for %s", url);
 
 	esp_http_client_cleanup(client);
+
+	return ret;
+}
+
+int downloader_file(char *url, char *fullpath)
+{
+	struct cb_file_ctx cb_ctx;
+	int ret;
+
+	ret = create_directories(fullpath);
+	if (ret) {
+		ESP_LOGE(TAG, "Unable to create directory for %s", fullpath);
+		return ret;
+	}
+
+	cb_ctx.fd = creat(fullpath, 0666);
+	if (cb_ctx.fd < 0) {
+		ESP_LOGE(TAG, "Unable to create %s %s", fullpath, strerror(errno));
+		return cb_ctx.fd;
+	}
+
+	ret = downloader_generic(url, file_cb, &cb_ctx);
+	if (ret)
+		ESP_LOGE(TAG, "Unable to download %s into %s", url, fullpath);
+
+	close(cb_ctx.fd);
 
 	return ret;
 }
