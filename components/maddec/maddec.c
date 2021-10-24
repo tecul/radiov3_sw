@@ -27,6 +27,7 @@ struct maddec {
 	unsigned char input_buffer[INPUT_BUFFER_SIZE];
 	unsigned char *end_buffer;
 	int16_t samples[1152][2];
+	int has_set_rate;
 };
 
 static int refill(struct maddec *self, int remain)
@@ -82,7 +83,14 @@ static enum mad_flow input_func(void *data, struct mad_stream *stream)
 
 static enum mad_flow header_func(void *data, struct mad_header const *header)
 {
+	struct maddec *self = data;
+
 	//printf("%s %ld.%ld\n", __FUNCTION__, header->duration.seconds, header->duration.fraction);
+	if (self->has_set_rate)
+		return MAD_FLOW_CONTINUE;
+
+	i2s_set_sample_rates(0, header->samplerate);
+	self->has_set_rate = 1;
 
 	return MAD_FLOW_CONTINUE;
 }
@@ -182,6 +190,7 @@ void maddec_start(void *hdl)
 	assert(hdl);
 
 	self->is_active = true;
+	self->has_set_rate = false;
 	res = xTaskCreatePinnedToCore(maddec_task, "maddec", 3 * 4096, hdl,
 			tskIDLE_PRIORITY + 1, &self->task, tskNO_AFFINITY);
 	assert(res == pdPASS);
