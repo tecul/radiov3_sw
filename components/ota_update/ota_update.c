@@ -14,6 +14,7 @@
 #include "freertos/task.h"
 
 #include "downloader.h"
+#include "utils.h"
 
 #define FW_DEV			1
 
@@ -234,99 +235,6 @@ static int ota_download_asset(lv_obj_t *mbox)
 	}
 
 	return ota_parse_manifest(mbox);
-}
-
-static char *concat(char *str1, char *str2)
-{
-	int len = strlen(str1) + 1 + strlen(str2) + 1;
-	char *res;
-	char *buf;
-
-	res = malloc(len);
-	if (res == NULL)
-		return NULL;
-
-	buf = res;
-	strcpy(buf , str1);
-	buf += strlen(str1);
-	*buf++ = '/';
-	strcpy(buf , str2);
-	buf += strlen(str2);
-	*buf = '\0';
-
-	return res;
-}
-
-static int walk_dir(char *root, walk_dir_entry_cb cb, walk_dir_leave_cb leave_cb, void *arg)
-{
-	struct dirent *entry;
-	char *new_root_name;
-	DIR *d;
-	int ret = 0;
-
-	if (root == NULL)
-		return -1;
-
-	ESP_LOGI(TAG, "Walk %s", root);
-	d = opendir(root);
-	if (!d) {
-		ESP_LOGW(TAG, "unable to open directory %s", root);
-		return -2;
-	}
-
-	entry = readdir(d);
-	while (entry) {
-		switch (entry->d_type) {
-		case DT_REG:
-			ret = cb(root, entry->d_name, arg);
-			if (ret)
-				goto error;
-			break;
-		case DT_DIR:
-			if (strcmp(entry->d_name, ".") == 0)
-				break;
-			if (strcmp(entry->d_name, "..") == 0)
-				break;
-			new_root_name = concat(root, entry->d_name);
-			ret = walk_dir(new_root_name, cb, leave_cb, arg);
-			free(new_root_name);
-			if (ret)
-				goto error;
-			break;
-		default:
-			ESP_LOGW(TAG, "unsupported dt_type %d", entry->d_type);
-		}
-		entry = readdir(d);
-	}
-
-	ret = leave_cb(root, arg);
-error:
-	closedir(d);
-	ESP_LOGI(TAG, "Walk of %s done", root);
-
-	return ret;
-}
-
-static int remove_file(char *dir, char *name, void *arg)
-{
-	char *fp;
-	int ret;
-
-	fp = concat(dir, name);
-	ret = remove(fp);
-	free(fp);
-
-	return ret;
-}
-
-static int remove_dir(char *dir, void *arg)
-{
-	return remove(dir);
-}
-
-static int remove_directories(char *dir)
-{
-	return walk_dir(dir, remove_file, remove_dir, NULL);
 }
 
 static void ota_install_asset()
