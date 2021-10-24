@@ -20,6 +20,9 @@ struct walk_dir_cbs {
 };
 
 char *concat(char *str1, char *str2);
+char *concat3(char *str1, char *str2, char *str3);
+char *concat4(char *str1, char *str2, char *str3, char *str4);
+char *concat_with_delim(char *str1, char *str2, char delim);
 int walk_dir(char *root, struct walk_dir_cbs *cbs, void *arg);
 int remove_directories(char *dir);
 

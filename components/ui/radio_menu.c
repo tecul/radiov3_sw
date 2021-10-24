@@ -14,6 +14,7 @@
 #include "radio_player.h"
 #include "wifi.h"
 #include "paging_menu.h"
+#include "utils.h"
 
 #define container_of(ptr, type, member) ({ \
 	const typeof( ((type *)0)->member ) *__mptr = (ptr); \
@@ -57,27 +58,6 @@ static const char* TAG = "rv3.radio_menu";
 static ui_hdl radio_menu_create_with_entry(struct entry *root, int is_root);
 static struct entry *radio_db_parse_array(struct db_parser *dbp, jsmntok_t *to, 
 					  struct entry *root);
-
-static char *concat_with_delim(char *str1, char *str2, char delim)
-{
-	int len = strlen(str1) + 1 + strlen(str2) + 1;
-	char *res;
-	char *buf;
-
-	res = malloc(len);
-	if (res == NULL)
-		return NULL;
-
-	buf = res;
-	strcpy(buf , str1);
-	buf += strlen(str1);
-	*buf++ = delim;
-	strcpy(buf , str2);
-	buf += strlen(str2);
-	*buf = '\0';
-
-	return res;
-}
 
 static int db_parser_init(struct db_parser *dbp, char *db_filepath)
 {

@@ -15,6 +15,7 @@
 
 #include "esp_log.h"
 #include "id3.h"
+#include "utils.h"
 
 static const char* TAG = "rv3.db";
 
@@ -48,80 +49,6 @@ struct track_nb_song_name {
 	int track_nb;
 	char *song_name;
 };
-
-typedef int (*walk_dir_entry_cb)(char *root, char *filename, void *arg);
-
-static char *concat(char *str1, char *str2)
-{
-	int len = strlen(str1) + 1 + strlen(str2) + 1;
-	char *res;
-	char *buf;
-
-	res = malloc(len);
-	if (res == NULL)
-		return NULL;
-
-	buf = res;
-	strcpy(buf , str1);
-	buf += strlen(str1);
-	*buf++ = '/';
-	strcpy(buf , str2);
-	buf += strlen(str2);
-	*buf = '\0';
-
-	return res;
-}
-
-static char *concat3(char *str1, char *str2, char *str3)
-{
-	int len = strlen(str1) + 1 + strlen(str2) + 1 + strlen(str3) + 1;
-	char *res;
-	char *buf;
-
-	res = malloc(len);
-	if (res == NULL)
-		return NULL;
-
-	buf = res;
-	strcpy(buf , str1);
-	buf += strlen(str1);
-	*buf++ = '/';
-	strcpy(buf , str2);
-	buf += strlen(str2);
-	*buf++ = '/';
-	strcpy(buf , str3);
-	buf += strlen(str3);
-	*buf = '\0';
-
-	return res;
-}
-
-static char *concat4(char *str1, char *str2, char *str3, char *str4)
-{
-	int len = strlen(str1) + 1 + strlen(str2) + 1 + strlen(str3) + 1 + strlen(str4) + 1;
-	char *res;
-	char *buf;
-
-	res = malloc(len);
-	if (res == NULL)
-		return NULL;
-
-	buf = res;
-	strcpy(buf , str1);
-	buf += strlen(str1);
-	*buf++ = '/';
-	strcpy(buf , str2);
-	buf += strlen(str2);
-	*buf++ = '/';
-	strcpy(buf , str3);
-	buf += strlen(str3);
-	*buf++ = '/';
-	strcpy(buf , str4);
-	buf += strlen(str4);
-	*buf = '\0';
-
-	return res;
-}
 
 static int read_db_info_by_filename(char *filename, struct db_info *db_info)
 {
@@ -295,53 +222,6 @@ static struct album_cache *get_album_cache(void *hdl, char *dirname)
 	cache = refill_cache(hdl, dirname);
 
 	return cache;
-}
-
-static int walk_dir(char *root, walk_dir_entry_cb cb, void *arg)
-{
-	struct dirent *entry;
-	char *new_root_name;
-	DIR *d;
-	int ret = 0;
-
-	if (root == NULL)
-		return -1;
-
-	ESP_LOGI(TAG, "Walk %s", root);
-	d = opendir(root);
-	if (!d) {
-		ESP_LOGW(TAG, "unable to open directory %s", root);
-		return -2;
-	}
-
-	entry = readdir(d);
-	while (entry) {
-		switch (entry->d_type) {
-		case DT_REG:
-			ret = cb(root, entry->d_name, arg);
-			if (ret)
-				goto error;
-			break;
-		case DT_DIR:
-			if (strcmp(entry->d_name, ".") == 0)
-				break;
-			if (strcmp(entry->d_name, "..") == 0)
-				break;
-			new_root_name = concat(root, entry->d_name);
-			walk_dir(new_root_name, cb, arg);
-			free(new_root_name);
-			break;
-		default:
-			ESP_LOGW(TAG, "unsupported dt_type %d", entry->d_type);
-		}
-		entry = readdir(d);
-	}
-
-error:
-	closedir(d);
-	ESP_LOGI(TAG, "Walk of %s done", root);
-
-	return ret;
 }
 
 static int builder_add_artist(struct db_builder *builder, struct id3_meta *meta)
@@ -575,6 +455,7 @@ static void builder_close(struct db_builder *builder)
 
 int update_db(char *dirname, char *root_dir)
 {
+	struct walk_dir_cbs cbs = {NULL};
 	struct db_builder builder;
 	int ret;
 
@@ -585,11 +466,13 @@ int update_db(char *dirname, char *root_dir)
 		return ret;
 	}
 
-	ret = walk_dir(root_dir, add_new_song, &builder);
+	cbs.reg_cb = add_new_song;
+	ret = walk_dir(root_dir, &cbs, &builder);
 	if (ret)
 		ESP_LOGE(TAG, "failed to populate db %d", ret);
 
-	ret = walk_dir(dirname, remove_old_song, &builder);
+	cbs.reg_cb = remove_old_song;
+	ret = walk_dir(dirname, &cbs, &builder);
 	if (ret)
 		ESP_LOGE(TAG, "failed to cleanup db %d", ret);
 

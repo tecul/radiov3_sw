@@ -11,6 +11,7 @@
 #include "db.h"
 #include "playlist.h"
 #include "music_player.h"
+#include "utils.h"
 
 static const char* TAG = "rv3.playlist_menu";
 
@@ -24,27 +25,6 @@ struct playlist_menu {
 	int entry_nb;
 	struct playlist_entry **entries;
 };
-
-static char *concat_with_delim(char *str1, char *str2, char delim)
-{
-	int len = strlen(str1) + 1 + strlen(str2) + 1;
-	char *res;
-	char *buf;
-
-	res = malloc(len);
-	if (res == NULL)
-		return NULL;
-
-	buf = res;
-	strcpy(buf , str1);
-	buf += strlen(str1);
-	*buf++ = delim;
-	strcpy(buf , str2);
-	buf += strlen(str2);
-	*buf = '\0';
-
-	return res;
-}
 
 static int count_dir_entries(char *dir)
 {

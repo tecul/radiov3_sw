@@ -30,7 +30,12 @@ static int remove_dir(char *dir, void *arg)
 /* public api */
 char *concat(char *str1, char *str2)
 {
-	int len = strlen(str1) + 1 + strlen(str2) + 1;
+	return concat_with_delim(str1, str2, '/');
+}
+
+char *concat3(char *str1, char *str2, char *str3)
+{
+	int len = strlen(str1) + 1 + strlen(str2) + 1 + strlen(str3) + 1;
 	char *res;
 	char *buf;
 
@@ -42,6 +47,57 @@ char *concat(char *str1, char *str2)
 	strcpy(buf , str1);
 	buf += strlen(str1);
 	*buf++ = '/';
+	strcpy(buf , str2);
+	buf += strlen(str2);
+	*buf++ = '/';
+	strcpy(buf , str3);
+	buf += strlen(str3);
+	*buf = '\0';
+
+	return res;
+}
+
+char *concat4(char *str1, char *str2, char *str3, char *str4)
+{
+	int len = strlen(str1) + 1 + strlen(str2) + 1 + strlen(str3) + 1 + strlen(str4) + 1;
+	char *res;
+	char *buf;
+
+	res = malloc(len);
+	if (res == NULL)
+		return NULL;
+
+	buf = res;
+	strcpy(buf , str1);
+	buf += strlen(str1);
+	*buf++ = '/';
+	strcpy(buf , str2);
+	buf += strlen(str2);
+	*buf++ = '/';
+	strcpy(buf , str3);
+	buf += strlen(str3);
+	*buf++ = '/';
+	strcpy(buf , str4);
+	buf += strlen(str4);
+	*buf = '\0';
+
+	return res;
+}
+
+char *concat_with_delim(char *str1, char *str2, char delim)
+{
+	int len = strlen(str1) + 1 + strlen(str2) + 1;
+	char *res;
+	char *buf;
+
+	res = malloc(len);
+	if (res == NULL)
+		return NULL;
+
+	buf = res;
+	strcpy(buf , str1);
+	buf += strlen(str1);
+	*buf++ = delim;
 	strcpy(buf , str2);
 	buf += strlen(str2);
 	*buf = '\0';
