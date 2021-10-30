@@ -591,3 +591,17 @@ void id3_put(struct id3_meta *meta)
 	if (meta->title)
 		free(meta->title);
 }
+
+int id3_dup_meta(struct id3_meta *meta, struct id3_meta *dup_meta)
+{
+	dup_meta->artist = strdup(meta->artist);
+	dup_meta->album = strdup(meta->album);
+	dup_meta->title = strdup(meta->title);
+
+	if (dup_meta->artist && dup_meta->album && dup_meta->title)
+		return 0;
+
+	id3_put(dup_meta);
+
+	return -1;
+}

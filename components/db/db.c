@@ -50,6 +50,18 @@ struct track_nb_song_name {
 	char *song_name;
 };
 
+static void sanitize_path(char *name)
+{
+	int len = strlen(name);
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		if (name[i] == '/' || name[i] == '?' || name[i] == ':' ||
+		    name[i] == '"')
+			name[i] = '_';
+	}
+}
+
 static int read_db_info_by_filename(char *filename, struct db_info *db_info)
 {
 	char *buffer_init;
@@ -105,6 +117,10 @@ static int read_db_info(void *hdl, char *artist, char *album, char *song, struct
 	struct db *db = hdl;
 	char *filename;
 	int ret;
+
+	sanitize_path(artist);
+	sanitize_path(album);
+	sanitize_path(song);
 
 	filename = concat4(db->dirname, artist, album, song);
 	if (!filename)
@@ -273,23 +289,38 @@ static int is_song_exist(struct db_builder *builder, struct id3_meta *meta)
 
 static int builder_add_song(struct db_builder *builder, char *filename, struct id3_meta *meta)
 {
+	struct id3_meta meta_dup;
 	char *filepath = NULL;
 	char buf[32];
 	int ret;
 	int fd = -1;
 
-	if (is_song_exist(builder, meta))
+	ret = id3_dup_meta(meta, &meta_dup);
+	if (ret)
+		return ret;
+
+	sanitize_path(meta_dup.artist);
+	sanitize_path(meta_dup.album);
+	sanitize_path(meta_dup.title);
+
+	if (is_song_exist(builder, &meta_dup)) {
+		id3_put(&meta_dup);
 		return 0;
+	}
 
-	ret = builder_add_artist(builder, meta);
-	if (ret)
+	ret = builder_add_artist(builder, &meta_dup);
+	if (ret) {
+		id3_put(&meta_dup);
 		return ret;
+	}
 
-	ret = builder_add_album(builder, meta);
-	if (ret)
+	ret = builder_add_album(builder, &meta_dup);
+	if (ret) {
+		id3_put(&meta_dup);
 		return ret;
+	}
 
-	filepath = concat4(builder->dirname, meta->artist, meta->album, meta->title);
+	filepath = concat4(builder->dirname, meta_dup.artist, meta_dup.album, meta_dup.title);
 	if (!filepath)
 		goto error;
 
@@ -323,12 +354,14 @@ static int builder_add_song(struct db_builder *builder, char *filename, struct i
 	if (ret != strlen(buf) + 1)
 		goto error;
 
+	id3_put(&meta_dup);
 	free(filepath);
 	close(fd);
 
 	return 0;
 
 error:
+	id3_put(&meta_dup);
 	if (filepath)
 		free(filepath);
 

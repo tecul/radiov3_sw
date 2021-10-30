@@ -11,5 +11,6 @@ struct id3_meta {
 
 int id3_get(char *filename, struct id3_meta *meta);
 void id3_put(struct id3_meta *meta);
+int id3_dup_meta(struct id3_meta *meta, struct id3_meta *dup_meta);
 
 #endif
