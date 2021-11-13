@@ -3,88 +3,45 @@
 #include <string.h>
 #include <assert.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
 
 #include "ring.h"
+#include "downloader.h"
 
 static const char* TAG = "rv3.fetch_socket_radio";
-
-static char *url;
-static char *port_nb;
-static char *path;
-
-static char requestDataBuffer[256];
-static char readBuffer[1024];
 
 struct fetch_socket_radio {
 	void *buffer_hdl;
 	TaskHandle_t task;
 	volatile bool is_active;
 	SemaphoreHandle_t sem_en_of_task;
+	char url[256];
 };
+
+static int write_buffer(void *data, int data_len, void *cb_ctx)
+{
+	struct fetch_socket_radio *self = cb_ctx;
+	int res;
+
+retry:
+	res = ring_push(self->buffer_hdl, data_len, data);
+	if (res) {
+		if (self->is_active)
+			goto retry;
+	}
+
+	return self->is_active ? 0 : 1;
+}
 
 static void fetch_socket_radio_task(void *arg)
 {
 	struct fetch_socket_radio *self = arg;
-	const struct addrinfo hints = {
-		.ai_family = AF_UNSPEC,
-		.ai_socktype = SOCK_STREAM,
-	};
-	struct addrinfo *addrinfo = NULL;
-	int s;
-	int res;
-	int len;
 
-	res = getaddrinfo(url, port_nb, &hints, &addrinfo);
-	if (res) {
-		ESP_LOGE(TAG, "unable to get addrinfo\n");
-		exit(-1);
-	}
-
-	s = socket(addrinfo->ai_family, addrinfo->ai_socktype, 0);
-	if (s < 0) {
-		ESP_LOGE(TAG, "unable to get socket\n");
-		exit(-1);
-	}
-
-	res = connect(s, addrinfo->ai_addr, addrinfo->ai_addrlen);
-	if (res) {
-		ESP_LOGE(TAG, "unable to connect\n");
-		exit(-1);
-	}
-	freeaddrinfo(addrinfo);
-
-	snprintf(requestDataBuffer, sizeof(requestDataBuffer), "GET %s HTTP/1.0\r\nHost: %s\r\nInitial-Burst: 96000\r\nConnection: Keep-Alive\r\n\r\n", path, url);
-	ESP_LOGI(TAG, "%s", requestDataBuffer);
-
-	res = write(s, requestDataBuffer, strlen(requestDataBuffer));
-	if (res <= 0) {
-		ESP_LOGE(TAG, "unable to send request\n");
-		exit(-1);
-	}
-
-	while (self->is_active) {
-		res = read(s, readBuffer, 1024);
-		if (res <= 0) {
-			ESP_LOGE(TAG, "read error %d / %d\n", res, errno);
-			vTaskDelay(100 / portTICK_PERIOD_MS);
-		}
-		len = res;
-retry:
-		res = ring_push(self->buffer_hdl, len, readBuffer);
-		/* test if we got a timeout */
-		if (res) {
-			if (self->is_active)
-				goto retry;
-		}
-	}
+	ESP_LOGI(TAG, "request %s", self->url);
+	downloader_generic(self->url, write_buffer, arg);
 
 	xSemaphoreGive(self->sem_en_of_task);
 	vTaskDelete(NULL);
@@ -113,17 +70,14 @@ void fetch_socket_radio_destroy(void *hdl)
 	free(hdl);
 }
 
-void fetch_socket_radio_start(void *hdl, char *url_, char *port_nb_, char *path_)
+void fetch_socket_radio_start(void *hdl, char *url, char *port_nb, char *path)
 {
 	struct fetch_socket_radio *self = hdl;
 	BaseType_t res;
 
 	assert(hdl);
 
-	url = url_;
-	port_nb = port_nb_;
-	path = path_;
-
+	snprintf(self->url, sizeof(self->url), "http://%s%s", url, path);
 	self->is_active = true;
 	res = xTaskCreatePinnedToCore(fetch_socket_radio_task, "fetch_socket_radio", 4096, hdl,
 			tskIDLE_PRIORITY + 1, &self->task, tskNO_AFFINITY);
