@@ -8,6 +8,7 @@
 	(type *)( (char *)__mptr - offsetof(type,member) );})
 
 #define ARRAY_SIZE(a)		(sizeof(a)/sizeof(a[0]))
+#define MIN(a,b)		((a)<(b)?(a):(b))
 
 typedef int (*walk_dir_entry_cb)(char *root, char *filename, void *arg);
 typedef int (*walk_dir_leave_cb)(char *root, void *arg);

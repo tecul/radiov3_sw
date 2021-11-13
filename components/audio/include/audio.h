@@ -4,7 +4,8 @@
 typedef void (*audio_track_info_cb)(void *hdl, char *track_title);
 
 void audio_init(void);
-void audio_radio_play(char *url, char *port_nb, char *path, int rate);
+void audio_radio_play(char *url, char *port_nb, char *path, int rate, int meta,
+		      void *hdl, audio_track_info_cb track_info_cb);
 void audio_radio_stop(void);
 void audio_music_play(char *filepath);
 void audio_music_stop(void);

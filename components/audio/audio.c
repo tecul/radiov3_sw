@@ -108,14 +108,15 @@ void audio_init()
 	printf("audio init done\n");
 }
 
-void audio_radio_play(char *url, char *port_nb, char *path, int rate)
+void audio_radio_play(char *url, char *port_nb, char *path, int rate, int meta,
+		      void *hdl, audio_track_info_cb track_info_cb)
 {
 	if (is_playing)
 		audio_radio_stop();
 
 	i2s_set_sample_rates(0, rate);
 	assert(stb350_start(stb350_hdl) == 0);
-	fetch_socket_radio_start(socket_hdl, url, port_nb, path);
+	fetch_socket_radio_start(socket_hdl, url, port_nb, path, meta, hdl, track_info_cb);
 	maddec_start(decoder_hdl);
 
 	is_playing = 1;

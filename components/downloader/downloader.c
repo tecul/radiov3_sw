@@ -43,6 +43,7 @@ static  const char* root_ca = \
 
 struct cb_info {
 	on_data_cb cb;
+	on_header_cb hdr_cb;
 	void *cb_ctx;
 };
 
@@ -142,6 +143,8 @@ static esp_err_t http_event_handle(esp_http_client_event_t *evt)
 	case HTTP_EVENT_ON_HEADER:
 		ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER %s: %s", evt->header_key,
 			 evt->header_value);
+		if (ctx->hdr_cb)
+			ctx->hdr_cb(evt->header_key, evt->header_value, ctx->cb_ctx);
 		break;
 	case HTTP_EVENT_ON_DATA:
 		ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA %d %p: %d", esp_http_client_get_status_code(evt->client), evt->data,
@@ -162,11 +165,14 @@ static esp_err_t http_event_handle(esp_http_client_event_t *evt)
 	return ESP_OK;
 }
 
-int downloader_generic(char *url, on_data_cb cb, void *cb_ctx)
+int downloader_generic_with_headers(char *url, on_data_cb cb, on_header_cb hdr_cb,
+				    void *cb_ctx, char **headers)
 {
 	esp_http_client_config_t config = {0};
-	struct cb_info ctx = {cb, cb_ctx};
+	struct cb_info ctx = {cb, hdr_cb, cb_ctx};
 	esp_http_client_handle_t client;
+	char *key;
+	char *value;
 	int ret;
 
 	config.url = url;
@@ -186,6 +192,16 @@ int downloader_generic(char *url, on_data_cb cb, void *cb_ctx)
 		return -1;
 	}
 
+	if (headers) {
+		while (*headers) {
+			key = *headers++;
+			value = *headers++;
+			ret = esp_http_client_set_header(client, key, value);
+			if (ret)
+				ESP_LOGW(TAG, "unable to set %s / %s : %d", key, value, ret);
+		}
+	}
+
 	ret = esp_http_client_perform(client);
 	if (ret)
 		ESP_LOGE(TAG, "unable to perform http for %s", url);
@@ -193,6 +209,11 @@ int downloader_generic(char *url, on_data_cb cb, void *cb_ctx)
 	esp_http_client_cleanup(client);
 
 	return ret;
+}
+
+int downloader_generic(char *url, on_data_cb cb, void *cb_ctx)
+{
+	return downloader_generic_with_headers(url, cb, NULL, cb_ctx, NULL);
 }
 
 int downloader_file(char *url, char *fullpath)

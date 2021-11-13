@@ -12,7 +12,8 @@ function radiolist_to_nodes(radiolist)
 					  'url': radiolist[i]['url'],
 					  'path': radiolist[i]['path'],
 					  'port': radiolist[i]['port'],
-					  'rate': radiolist[i]['rate']});
+					  'rate': radiolist[i]['rate'],
+					  'meta': radiolist[i]['meta'] ? radiolist[i]['meta'] : '0'});
 		} else {
 			res.push({'name': radiolist[i]['folder'], children: radiolist_to_nodes(radiolist[i]['entries'])});
 		}
@@ -33,7 +34,8 @@ function nodes_to_radiolist(nods)
 					  'url': nods[i]['url'],
 					  'path': nods[i]['path'],
 					  'port': nods[i]['port'],
-					  'rate': nods[i]['rate']});
+					  'rate': nods[i]['rate'],
+					  'meta': nods[i]['meta']});
 		} else {
 			res.push({'folder': nods[i]['name'], 'entries': nodes_to_radiolist(nods[i]['children'])});
 		}
@@ -103,6 +105,10 @@ function edit_node(radio)
 		<label for=\"rate\">rate: </label> \
 		<input type=\"text\" name=\"rate\" value=\"" + radio['rate'] + "\"> \
 	</div>\
+	<div class=\"form-radio\">\
+		<label for=\"meta\">meta: </label> \
+		<input type=\"text\" name=\"meta\" value=\"" + radio['meta'] + "\"> \
+	</div>\
 </form>\
 	"));
 
@@ -159,7 +165,8 @@ function add_radio()
 							  'url': 'invalid',
 							  'path': '/',
 							  'port': '80',
-							  'rate': '44100'});
+							  'rate': '44100',
+							  'meta': '0'});
 }
 
 function edit_radio()

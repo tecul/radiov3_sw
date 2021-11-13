@@ -45,6 +45,7 @@ struct radio {
 	char *port;
 	char *path;
 	char *rate;
+	char *meta;
 };
 
 struct radio_menu {
@@ -171,6 +172,11 @@ static int primitive_is_rate(struct db_parser *dbp, jsmntok_t *t)
 	return primitive_is_string(dbp, t, "rate");
 }
 
+static int primitive_is_meta(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "meta");
+}
+
 static jsmntok_t *fetch_next_token(struct db_parser *dbp)
 {
 	jsmntok_t *t;
@@ -282,6 +288,7 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 	char *port = NULL;
 	char *path = NULL;
 	char *rate = NULL;
+	char *meta = NULL;
 
 	while (t) {
 		//print_token(dbp, t);
@@ -295,6 +302,8 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 			path = dup_next_string_in_range(dbp, start, end);
 		else if (primitive_is_rate(dbp, t))
 			rate = dup_next_string_in_range(dbp, start, end);
+		else if (primitive_is_meta(dbp, t))
+			meta = dup_next_string_in_range(dbp, start, end);
 		t = fetch_next_token_in_range(dbp, start, end);
 	}
 	radio = malloc(sizeof(*radio));
@@ -307,6 +316,7 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 		radio->port = port;
 		radio->path = path;
 		radio->rate = rate;
+		radio->meta = meta;
 	} else {
 		if (radio)
 			free(radio);
@@ -320,6 +330,8 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 			free(path);
 		if (rate)
 			free(rate);
+		if (meta)
+			free(meta);
 		radio = NULL;
 		return NULL;
 	}
@@ -408,6 +420,8 @@ static void radio_db_delete(struct entry *root)
 			free(radio->port);
 			free(radio->path);
 			free(radio->rate);
+			if (radio->meta)
+				free(radio->meta);
 			free(radio);
 		} else if (current->type == ENTRY_FOLDER) {
 			radio_db_delete(current->sub);
@@ -476,7 +490,8 @@ static void radio_menu_select_radio(struct radio_menu *menu, struct entry *entry
 	struct radio *radio = container_of(entry, struct radio, entry);
 
 	ESP_LOGI(TAG, "select radio %s", entry->name);
-	radio_player_create(entry->name, radio->url, radio->port, radio->path, atoi(radio->rate));
+	radio_player_create(entry->name, radio->url, radio->port, radio->path, atoi(radio->rate),
+			    radio->meta ? atoi(radio->meta) : 0);
 }
 
 static void radio_menu_select_folder(struct radio_menu *menu, struct entry *entry)
