@@ -138,7 +138,7 @@ static void radio_player_track_info_cb(void *hdl, char *track_title)
 
 static void radio_player_screen(struct radio_player *player, const char *radio_label,
 				const char *url, const char * port_nb, const char *path,
-				int rate, int meta)
+				int rate, int meta, int anti_ad)
 {
 	const int sizes[RADIO_PLAYER_NB][2] = {
 		{60, 55}, {60, 55}, {60, 55}, {60, 55}
@@ -193,12 +193,12 @@ static void radio_player_screen(struct radio_player *player, const char *radio_l
 	assert(player->task_level);
 
 	audio_radio_play((char *) url, (char *) port_nb, (char *) path, rate, meta,
-			 player, radio_player_track_info_cb);
+			 anti_ad, player, radio_player_track_info_cb);
 }
 
 ui_hdl radio_player_create(const char *radio_label, const char *url,
 			   const char *port_nb, const char *path, int rate,
-			   int meta)
+			   int meta, int anti_ad)
 {
 	struct radio_player *player;
 
@@ -209,7 +209,7 @@ ui_hdl radio_player_create(const char *radio_label, const char *url,
 
 	player->prev_scr = lv_disp_get_scr_act(NULL);
 	player->cbs.destroy_chained = destroy_chained;
-	radio_player_screen(player, radio_label, url, port_nb, path, rate, meta);
+	radio_player_screen(player, radio_label, url, port_nb, path, rate, meta, anti_ad);
 	system_menu_set_user_label("");
 
 	return &player->cbs;

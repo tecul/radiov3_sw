@@ -13,7 +13,8 @@ function radiolist_to_nodes(radiolist)
 					  'path': radiolist[i]['path'],
 					  'port': radiolist[i]['port'],
 					  'rate': radiolist[i]['rate'],
-					  'meta': radiolist[i]['meta'] ? radiolist[i]['meta'] : '0'});
+					  'meta': radiolist[i]['meta'] ? radiolist[i]['meta'] : '0',
+					  'anti_ad': radiolist[i]['anti_ad'] ? radiolist[i]['anti_ad'] : '0'});
 		} else {
 			res.push({'name': radiolist[i]['folder'], children: radiolist_to_nodes(radiolist[i]['entries'])});
 		}
@@ -35,7 +36,8 @@ function nodes_to_radiolist(nods)
 					  'path': nods[i]['path'],
 					  'port': nods[i]['port'],
 					  'rate': nods[i]['rate'],
-					  'meta': nods[i]['meta']});
+					  'meta': nods[i]['meta'],
+					  'anti_ad': nods[i]['anti_ad']});
 		} else {
 			res.push({'folder': nods[i]['name'], 'entries': nodes_to_radiolist(nods[i]['children'])});
 		}
@@ -109,6 +111,10 @@ function edit_node(radio)
 		<label for=\"meta\">meta: </label> \
 		<input type=\"text\" name=\"meta\" value=\"" + radio['meta'] + "\"> \
 	</div>\
+	<div class=\"form-radio\">\
+		<label for=\"anti_ad\">anti_ad: </label> \
+		<input type=\"text\" name=\"anti_ad\" value=\"" + radio['anti_ad'] + "\"> \
+	</div>\
 </form>\
 	"));
 
@@ -166,7 +172,8 @@ function add_radio()
 							  'path': '/',
 							  'port': '80',
 							  'rate': '44100',
-							  'meta': '0'});
+							  'meta': '0',
+							  'anti_ad': '0'});
 }
 
 function edit_radio()

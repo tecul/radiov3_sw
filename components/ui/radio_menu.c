@@ -46,6 +46,7 @@ struct radio {
 	char *path;
 	char *rate;
 	char *meta;
+	char *anti_ad;
 };
 
 struct radio_menu {
@@ -177,6 +178,11 @@ static int primitive_is_meta(struct db_parser *dbp, jsmntok_t *t)
 	return primitive_is_string(dbp, t, "meta");
 }
 
+static int primitive_is_anti_ad(struct db_parser *dbp, jsmntok_t *t)
+{
+	return primitive_is_string(dbp, t, "anti_ad");
+}
+
 static jsmntok_t *fetch_next_token(struct db_parser *dbp)
 {
 	jsmntok_t *t;
@@ -289,6 +295,7 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 	char *path = NULL;
 	char *rate = NULL;
 	char *meta = NULL;
+	char *anti_ad = NULL;
 
 	while (t) {
 		//print_token(dbp, t);
@@ -304,6 +311,8 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 			rate = dup_next_string_in_range(dbp, start, end);
 		else if (primitive_is_meta(dbp, t))
 			meta = dup_next_string_in_range(dbp, start, end);
+		else if (primitive_is_anti_ad(dbp, t))
+			anti_ad = dup_next_string_in_range(dbp, start, end);
 		t = fetch_next_token_in_range(dbp, start, end);
 	}
 	radio = malloc(sizeof(*radio));
@@ -317,6 +326,7 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 		radio->path = path;
 		radio->rate = rate;
 		radio->meta = meta;
+		radio->anti_ad = anti_ad;
 	} else {
 		if (radio)
 			free(radio);
@@ -332,6 +342,8 @@ static struct entry *parse_radio_in_range(struct db_parser *dbp, int start, int 
 			free(rate);
 		if (meta)
 			free(meta);
+		if (anti_ad)
+			free(anti_ad);
 		radio = NULL;
 		return NULL;
 	}
@@ -422,6 +434,8 @@ static void radio_db_delete(struct entry *root)
 			free(radio->rate);
 			if (radio->meta)
 				free(radio->meta);
+			if (radio->anti_ad)
+				free(radio->anti_ad);
 			free(radio);
 		} else if (current->type == ENTRY_FOLDER) {
 			radio_db_delete(current->sub);
@@ -491,7 +505,7 @@ static void radio_menu_select_radio(struct radio_menu *menu, struct entry *entry
 
 	ESP_LOGI(TAG, "select radio %s", entry->name);
 	radio_player_create(entry->name, radio->url, radio->port, radio->path, atoi(radio->rate),
-			    radio->meta ? atoi(radio->meta) : 0);
+			    radio->meta ? atoi(radio->meta) : 0, radio->anti_ad ? atoi(radio->anti_ad) : 0);
 }
 
 static void radio_menu_select_folder(struct radio_menu *menu, struct entry *entry)

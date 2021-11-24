@@ -39,6 +39,7 @@ struct fetch_socket_radio {
 	struct icy icy;
 	void *cb_hdl;
 	audio_track_info_cb track_info_cb;
+	int anti_ad;
 };
 
 static int write_buffer(void *data, int data_len, void *cb_ctx)
@@ -146,6 +147,7 @@ static int handle_icy_payload(struct fetch_socket_radio *self, char *data, int l
 	icy->icy_pos += consume;
 	icy->icy_len -= consume;
 	if (!icy->icy_len) {
+		ESP_LOGI(TAG,"%s", icy->icy_buffer);
 		parse_icy_payload(self, icy->icy_buffer);
 		free(icy->icy_buffer);
 		icy->st = ST_DATA;
@@ -179,6 +181,16 @@ static int write_buffer_icy(void *data, int data_len, void *cb_ctx)
 	return self->is_active ? 0 : 1;
 }
 
+static int write_buffer_icy_anti_ad(void *data, int data_len, void *cb_ctx)
+{
+	struct fetch_socket_radio *self = cb_ctx;
+
+	if (self->anti_ad)
+		self->anti_ad--;
+
+	return !self->anti_ad;
+}
+
 static void hdr_cb(char *key, char *value, void *cb_ctx)
 {
 	const char *metaint = "icy-metaint";
@@ -202,6 +214,9 @@ static void fetch_socket_radio_task(void *arg)
 		headers[0] = "Icy-MetaData";
 		headers[1] = "1";
 	}
+
+	if (self->anti_ad)
+		downloader_generic_with_headers(self->url, write_buffer_icy_anti_ad, hdr_cb ,arg, headers);
 	downloader_generic_with_headers(self->url, write_buffer_icy, hdr_cb ,arg, headers);
 
 	xSemaphoreGive(self->sem_en_of_task);
@@ -232,7 +247,7 @@ void fetch_socket_radio_destroy(void *hdl)
 }
 
 void fetch_socket_radio_start(void *hdl, char *url, char *port_nb, char *path, int meta,
-			      void *cb_hdl, audio_track_info_cb track_info_cb)
+			      int anti_ad, void *cb_hdl, audio_track_info_cb track_info_cb)
 {
 	struct fetch_socket_radio *self = hdl;
 	BaseType_t res;
@@ -244,6 +259,7 @@ void fetch_socket_radio_start(void *hdl, char *url, char *port_nb, char *path, i
 	self->track_info_cb = track_info_cb;
 	self->cb_hdl = cb_hdl;
 	self->is_active = true;
+	self->anti_ad = anti_ad;
 	res = xTaskCreatePinnedToCore(fetch_socket_radio_task, "fetch_socket_radio", 4096, hdl,
 			tskIDLE_PRIORITY + 1, &self->task, tskNO_AFFINITY);
 	assert(res == pdPASS);
